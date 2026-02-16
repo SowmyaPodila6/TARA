@@ -1219,15 +1219,21 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
         transform: translateY(-1px);
     }
-    section[data-testid="stSidebar"] .stButton > button::after {
-        content: none !important;
+    /* Hide all browser-native tooltips on buttons */
+    section[data-testid="stSidebar"] .stButton > button {
+        pointer-events: auto;
     }
     section[data-testid="stSidebar"] .stButton > button[title] {
-        title: none;
+        font-size: 0.9rem; /* re-assert so selector stays valid */
     }
     /* Hide default Streamlit tooltips on sidebar buttons */
     section[data-testid="stSidebar"] .stTooltipIcon,
     section[data-testid="stSidebar"] [data-testid="stTooltipHoverTarget"] {
+        display: none !important;
+    }
+    /* Hide any p element inside sidebar buttons that shows keyboard text */
+    section[data-testid="stSidebar"] .stButton > button p[data-testid],
+    section[data-testid="stSidebar"] .stButton > button div[data-testid="stMarkdownContainer"] {
         display: none !important;
     }
     section[data-testid="stSidebar"] .stSelectbox > div > div {
@@ -1416,6 +1422,18 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 st.sidebar.button("➕ Start New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
+
+# Remove browser tooltip ("title" attribute) from all buttons
+st.sidebar.markdown("""
+<script>
+    // Strip title attributes that cause "Keyboard double-click" tooltip
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('button[title]').forEach(btn => btn.removeAttribute('title'));
+    });
+    observer.observe(document.body, {childList: true, subtree: true});
+    document.querySelectorAll('button[title]').forEach(btn => btn.removeAttribute('title'));
+</script>
+""", unsafe_allow_html=True)
 
 st.sidebar.divider()
 
