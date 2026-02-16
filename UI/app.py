@@ -436,8 +436,8 @@ def _render_json_sections(json_data, field_info, prefix):
         has_data = content and content.strip() and len(content.strip()) > 10
         status = "✅" if has_data else "❌"
         
-        # Shorter expander label — move page refs into the body
-        with st.expander(f"{icon} {title}  —  {status}", expanded=False):
+        # Shorter expander label - move page refs into the body
+        with st.expander(f"{icon} {title} | {status}", expanded=False):
             if has_data:
                 # Enhanced metadata section
                 col1, col2, col3 = st.columns([1, 1, 1])
