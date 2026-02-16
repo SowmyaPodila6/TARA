@@ -21,6 +21,16 @@ from langgraph_custom.langgraph_workflow import build_workflow, chat_node_stream
 from dotenv import load_dotenv
 import re
 
+# ---------------------------------------------------------------------------
+# Resolve API key: Streamlit Cloud secrets take priority, then .env / env vars
+# ---------------------------------------------------------------------------
+try:
+    _secret_key = st.secrets.get("OPENAI_API_KEY") or st.secrets.get("openai_api_key")
+    if _secret_key:
+        os.environ.setdefault("OPENAI_API_KEY", _secret_key)
+except Exception:
+    pass
+
 load_dotenv()
 
 # Cache the workflow to avoid rebuilding on every page load
@@ -1116,7 +1126,7 @@ def create_summary_pdf(summary_text, nct_id):
 
 # Page configuration
 st.set_page_config(
-    page_title="ClinicalIQ – Clinical Protocol Intelligence & Q&A",
+    page_title="TARA – Textual Analysis & Regulatory Assistant",
     page_icon="🔬",
     layout="wide"
 )
@@ -1155,16 +1165,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Clean header with logo
-logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "ctis-2024.png")
+logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "tara-logo.png")
 if os.path.exists(logo_path):
     st.markdown("""
         <div style='display: flex; align-items: center; justify-content: center; gap: 25px; margin: 0; padding: 15px 0; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);'>
             <img src='data:image/png;base64,{}' width='110' style='flex-shrink: 0;'/>
             <div style='text-align: center;'>
                 <h1 style='margin: 0; padding: 0; font-size: 3.5em; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 700; letter-spacing: -1.5px;'>
-                    <span style='color: #C1272D;'>Cli</span><span style='color: #1E293B;'>nicalI</span><span style='color: #C1272D;'>Q</span>
+                    <span style='color: #0066cc;'>T</span><span style='color: #1E293B;'>AR</span><span style='color: #0066cc;'>A</span>
                 </h1>
-                <p style='color: #64748B; margin: 8px 0 0 0; padding: 0; font-size: 1.2em; font-weight: 500; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>AI-Powered Clinical Protocol Intelligence Platform</p>
+                <p style='color: #64748B; margin: 8px 0 0 0; padding: 0; font-size: 1.2em; font-weight: 500; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>Textual Analysis &amp; Regulatory Assistant</p>
             </div>
         </div>
     """.format(__import__('base64').b64encode(open(logo_path, 'rb').read()).decode()), unsafe_allow_html=True)
@@ -1172,9 +1182,9 @@ else:
     st.markdown("""
         <div style='text-align: center; margin: 0; padding: 15px 0; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);'>
             <h1 style='margin: 0; padding: 0; font-size: 3.5em; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 700; letter-spacing: -1.5px;'>
-                <span style='color: #C1272D;'>Cli</span><span style='color: #1E293B;'>nicalI</span><span style='color: #C1272D;'>Q</span>
+                <span style='color: #0066cc;'>T</span><span style='color: #1E293B;'>AR</span><span style='color: #0066cc;'>A</span>
             </h1>
-            <p style='color: #64748B; margin: 8px 0 0 0; padding: 0; font-size: 1.2em; font-weight: 500; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>AI-Powered Clinical Protocol Intelligence Platform</p>
+            <p style='color: #64748B; margin: 8px 0 0 0; padding: 0; font-size: 1.2em; font-weight: 500; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>Textual Analysis &amp; Regulatory Assistant</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1230,7 +1240,7 @@ if conversations:
 # Welcome message if no messages
 if not st.session_state.messages:
     with st.chat_message("assistant"):
-        st.markdown("""👋 Welcome to **ClinicalIQ** - Your AI-powered clinical protocol intelligence platform!
+        st.markdown("""👋 Welcome to **TARA** – Your AI-powered Textual Analysis & Regulatory Assistant!
 
 📄 **Upload Protocols**
 Start with a clinical trial PDF or a ClinicalTrials.gov URL.

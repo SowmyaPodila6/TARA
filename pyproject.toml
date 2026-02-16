@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "genai-clinicaltrials"
-version = "0.1.0"
-description = "Clinical Trials Information Extraction System using LangGraph"
+name = "tara-regulatory-assistant"
+version = "2.0.0"
+description = "TARA – Textual Analysis & Regulatory Assistant for Clinical Trials"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 

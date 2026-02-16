@@ -45,13 +45,59 @@ load_dotenv()
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-# Initialize LLM with streaming support
-# Using gpt-4o-mini for higher rate limits (200k TPM vs 30k TPM for gpt-4o)
-# gpt-4o-mini is 15x cheaper and has 128k context window (same as gpt-4o)
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, streaming=True)
 
-# Create a non-streaming LLM instance for re-extraction
-llm_non_streaming = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, streaming=False)
+def _resolve_api_key():
+    """Resolve OpenAI API key from Streamlit secrets or environment.
+    Streamlit Cloud stores secrets in st.secrets; local dev uses .env / env vars."""
+    try:
+        import streamlit as st
+        key = st.secrets.get("OPENAI_API_KEY") or st.secrets.get("openai_api_key")
+        if key:
+            os.environ.setdefault("OPENAI_API_KEY", key)
+            return key
+    except Exception:
+        pass
+    return os.environ.get("OPENAI_API_KEY", "")
+
+
+# ---------------------------------------------------------------------------
+# Lazy-initialised LLM singletons
+# Module-level instantiation of ChatOpenAI fails when the API key is not yet
+# available (e.g. on Streamlit Cloud where st.secrets is only populated at
+# runtime).  We use a simple lazy getter so the objects are created on first
+# use instead of at import time.
+# ---------------------------------------------------------------------------
+_llm: Optional[ChatOpenAI] = None
+_llm_non_streaming: Optional[ChatOpenAI] = None
+
+
+def _get_llm(streaming: bool = True) -> ChatOpenAI:
+    """Return (and cache) a ChatOpenAI instance, creating it on first call."""
+    global _llm, _llm_non_streaming
+    _resolve_api_key()  # ensure key is set before creating the client
+    if streaming:
+        if _llm is None:
+            _llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, streaming=True)
+        return _llm
+    else:
+        if _llm_non_streaming is None:
+            _llm_non_streaming = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, streaming=False)
+        return _llm_non_streaming
+
+
+# Convenience aliases so existing code that references the bare names still works.
+# They are now *properties* via a tiny module-level wrapper; every call-site that
+# used the old globals (``llm.invoke(...)`` etc.) keeps working unchanged because
+# Python resolves the name at call time through the module dict.
+class _LazyLLM:
+    """Descriptor that defers ChatOpenAI construction until first attribute access."""
+    def __init__(self, streaming: bool):
+        self._streaming = streaming
+    def __getattr__(self, name):
+        return getattr(_get_llm(self._streaming), name)
+
+llm = _LazyLLM(streaming=True)
+llm_non_streaming = _LazyLLM(streaming=False)
 
 # System message for GPT-4 summarization (from app_v1)
 SYSTEM_MESSAGE = "You are a clinical research summarization expert. Create concise, well-formatted summaries that focus only on available information. Avoid filler text and sections with insufficient data. Use clear markdown formatting and keep summaries under 400 words while including all key available information."
@@ -1994,7 +2040,7 @@ def build_workflow() -> StateGraph:
 
 def get_shared_llm_instance():
     """Get the shared non-streaming LLM instance for re-extraction"""
-    return llm_non_streaming
+    return _get_llm(streaming=False)
 
 def get_workflow():
     """Get the workflow app instance"""

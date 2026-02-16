@@ -1,6 +1,6 @@
-# Clinical Trial Analysis System (ClinicalIQ)
+# TARA – Textual Analysis & Regulatory Assistant
 
-A comprehensive AI-powered system for clinical trial document analysis with intelligent extraction, re-extraction capabilities, and semantic search.
+An AI-powered platform for clinical trial document analysis with intelligent extraction, human-in-the-loop refinement, and semantic search across trial databases.
 
 ## 🚀 Quick Setup
 
@@ -10,9 +10,8 @@ A comprehensive AI-powered system for clinical trial document analysis with inte
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/SowmyaPodila6/genai_clinicaltrials.git
+git clone <your-repo-url>
 cd genai_clinicaltrials
-git checkout ui_enhancements
 
 # Create virtual environment
 python -m venv .venv
@@ -42,6 +41,15 @@ echo "OPENAI_API_KEY=your-api-key-here" > .env
 streamlit run UI/app.py
 ```
 **→ Open http://localhost:8501**
+
+### ☁️ Streamlit Cloud Deployment
+1. Push this repo to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and create a new app pointing to `UI/app.py`.
+3. In **Settings → Secrets** add:
+   ```toml
+   OPENAI_API_KEY = "sk-..."
+   ```
+4. Deploy – the app reads the key from `st.secrets` automatically.
 
 ## 📁 Repository Structure
 

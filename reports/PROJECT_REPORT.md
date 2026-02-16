@@ -1,15 +1,15 @@
-# Clinical Trial Analysis System - Technical Architecture Report
+# TARA – Textual Analysis & Regulatory Assistant – Technical Architecture Report
 
-**Project Name:** GenAI Clinical Trials Analysis System  
+**Project Name:** TARA (Textual Analysis & Regulatory Assistant)  
 **Date:** December 8, 2025  
 **Version:** 2.0  
-**Repository:** genai_clinicaltrials (ui_enhancements branch)
+**Repository:** genai_clinicaltrials
 
 ---
 
 ## Executive Summary
 
-ClinicalIQ is an intelligent clinical trial analysis platform that automates document processing and enables semantic search across clinical trial databases. Built with Streamlit and LangGraph, the system extracts structured information from clinical trial protocols and provides conversational access to comparative trial data.
+TARA is an intelligent clinical trial analysis platform that automates document processing and enables semantic search across clinical trial databases. Built with Streamlit and LangGraph, the system extracts structured information from clinical trial protocols and provides conversational access to comparative trial data.
 
 **Core Capabilities:**
 - Automated extraction of 9 standardized clinical trial fields from PDFs and ClinicalTrials.gov URLs
@@ -30,7 +30,7 @@ ClinicalIQ is an intelligent clinical trial analysis platform that automates doc
 
 **Frontend:**
 - Streamlit 1.50.0 (Web interface)
-- Custom CSS for ClinicalIQ branding
+- Custom CSS for TARA branding
 
 **AI/ML Services:**
 - OpenAI GPT-4o-mini (Text generation)
@@ -116,7 +116,7 @@ The Streamlit web app (UI/app.py) provides:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    ClinicalIQ - Web Interface                    │
+│                    TARA - Web Interface                    │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
 │  │ File Upload │  │ URL Input   │  │ Chat        │  │ History     │  │
 │  │ (PDF Files) │  │ (CT.gov)    │  │ Interface   │  │ (SQLite)    │  │
@@ -545,7 +545,7 @@ This dual-layer approach (vector + LLM) improves response accuracy and user sati
 
 ## 5. Conclusion
 
-ClinicalIQ provides an end-to-end solution for clinical trial document analysis, combining intelligent extraction with semantic search capabilities:
+TARA provides an end-to-end solution for clinical trial document analysis, combining intelligent extraction with semantic search capabilities:
 
 **Core Features:**
 - **Adaptive extraction:** Quality-based routing between parser-only and GPT-4o-mini fallback
@@ -560,5 +560,5 @@ The system is deployed on the `ui_enhancements` branch with full database integr
 
 **Report Generated:** December 8, 2025  
 **Version:** 2.0 - Technical Architecture Documentation  
-**Contact:** Clinical Trial Analysis System Team  
-**Repository:** https://github.com/SowmyaPodila6/genai_clinicaltrials (ui_enhancements branch)
+**Contact:** TARA Project Team  
+**Repository:** genai_clinicaltrials
