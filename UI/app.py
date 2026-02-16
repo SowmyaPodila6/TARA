@@ -1040,16 +1040,19 @@ def _regenerate_summary(state):
 
 def _get_pdf_bytes(pdf):
     """Get PDF bytes - compatible with both fpdf 1.x and fpdf2."""
-    try:
-        result = pdf.output(dest='S')  # fpdf 1.x
-    except TypeError:
-        result = pdf.output()  # fpdf2 (dest param removed)
+    result = pdf.output()  # fpdf2 returns bytearray; fpdf 1.x returns str or dumps to stdout
     if isinstance(result, (bytearray, memoryview)):
         return bytes(result)
     if isinstance(result, bytes) and len(result) > 0:
         return result
     if isinstance(result, str) and len(result) > 0:
         return result.encode('latin1', 'ignore')
+    # fpdf 1.x output() without dest='S' returns empty — retry with dest='S'
+    result = pdf.output(dest='S')
+    if isinstance(result, str) and len(result) > 0:
+        return result.encode('latin1', 'ignore')
+    if isinstance(result, bytes) and len(result) > 0:
+        return result
     raise RuntimeError("PDF output returned empty data")
 
 
