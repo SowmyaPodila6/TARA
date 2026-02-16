@@ -1218,6 +1218,11 @@ else:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
+# Handle new chat rerun flag (st.rerun() doesn't work inside callbacks)
+if st.session_state.get("new_chat_requested"):
+    st.session_state.new_chat_requested = False
+    st.rerun()
+
 # Sidebar
 st.sidebar.button("➕ Start New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
 
@@ -1620,6 +1625,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                         "input_type": "rag_only",
                         "raw_data": {},
                         "parsed_json": {},
+                        "parser_only_json": {},
                         "data_to_summarize": {},
                         "confidence_score": 0.0,
                         "completeness_score": 0.0,
@@ -1633,6 +1639,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                         "extraction_progress": {},
                         "extraction_cost_estimate": {},
                         "progress_log": [],
+                        "full_text": "",
                         "use_rag_tool": False,
                         "rag_tool_results": ""
                     }
