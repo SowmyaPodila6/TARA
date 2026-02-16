@@ -1471,26 +1471,26 @@ if not st.session_state.messages:
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("""
-<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc;">
+<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
     <strong>📄 Upload a Protocol</strong><br>
     <span style="color: #555; font-size: 0.9em;">Drop a clinical trial PDF or paste a ClinicalTrials.gov URL</span>
 </div>
 """, unsafe_allow_html=True)
             st.markdown("""
-<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc;">
+<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
     <strong>💬 Ask Me Anything</strong><br>
     <span style="color: #555; font-size: 0.9em;">Query your study data — eligibility, endpoints, treatment arms & more</span>
 </div>
 """, unsafe_allow_html=True)
         with col2:
             st.markdown("""
-<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800;">
+<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
     <strong>🔍 Structured Extraction</strong><br>
     <span style="color: #555; font-size: 0.9em;">9 key fields auto-extracted into JSON — review, refine & approve</span>
 </div>
 """, unsafe_allow_html=True)
             st.markdown("""
-<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800;">
+<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
     <strong>🔎 Find Similar Studies</strong><br>
     <span style="color: #555; font-size: 0.9em;">Search 100+ trials by drug name — e.g. <em>"Find studies using Pembrolizumab"</em></span>
 </div>
