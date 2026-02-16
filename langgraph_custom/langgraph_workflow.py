@@ -214,6 +214,10 @@ def parse_pdf(state: WorkflowState) -> WorkflowState:
         # Parse PDF with enhanced parser
         clinical_data, tables = parser.parse_pdf(file_path, extract_tables=True)
         
+        # Cache the raw full text so llm_fallback can skip redundant PDF extraction
+        if hasattr(parser, 'last_full_text') and parser.last_full_text:
+            state["full_text"] = parser.last_full_text
+        
         # Convert ClinicalTrialData to dict
         from dataclasses import asdict
         parsed_schema = {
@@ -967,8 +971,11 @@ def llm_fallback(state: WorkflowState) -> WorkflowState:
         state["parser_only_json"] = copy.deepcopy(state.get("parsed_json", {}))
         log_progress("📋 Saved parser-only output for comparison")
         
-        # Get full document text
-        if state["input_type"] == "pdf":
+        # Get full document text — reuse cached text from parse_pdf when available
+        if state.get("full_text"):
+            full_text = state["full_text"]
+            log_progress("📄 Reusing cached full text from parser (skipped redundant PDF extraction)")
+        elif state["input_type"] == "pdf":
             parser = EnhancedClinicalTrialParser()
             
             file_path = state["input_url"]

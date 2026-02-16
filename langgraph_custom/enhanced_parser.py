@@ -777,6 +777,7 @@ class EnhancedClinicalTrialParser:
         
         # Step 1: Extract text
         text, metadata = self.extract_text_multimethod(file_path)
+        self.last_full_text = text  # Cache for reuse by workflow
         logger.info(f"Extracted {len(text)} characters from {metadata['pages']} pages")
         
         # Step 2: Detect sections
