@@ -33,6 +33,10 @@ except Exception:
 
 load_dotenv()
 
+# Chat avatar constants – Material Design icons for a clean professional look
+AVATAR_ASSISTANT = ":material/biotech:"   # science/clinical theme
+AVATAR_USER = ":material/person:"         # minimal human silhouette
+
 # Cache the workflow to avoid rebuilding on every page load
 @st.cache_resource
 def get_workflow():
@@ -972,7 +976,7 @@ def _regenerate_summary(state):
                     return
             
             # Generate new summary
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                 st.markdown("### Updated Summary")
                 message_placeholder = st.empty()
                 full_response = ""
@@ -1474,7 +1478,7 @@ if conversations:
 
 # Welcome message if no messages
 if not st.session_state.messages:
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
         st.markdown("Hello! I'm **TARA**, your clinical trials assistant.")
         st.markdown("Here's how I can help:")
         
@@ -1506,7 +1510,8 @@ if not st.session_state.messages:
 
 # Display existing chat messages
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    _avatar = AVATAR_ASSISTANT if message["role"] == "assistant" else AVATAR_USER
+    with st.chat_message(message["role"], avatar=_avatar):
         # Check if this is the extraction results marker
         if message["content"] == "EXTRACTION_RESULTS_MARKER" and st.session_state.current_state:
             st.markdown("### Extraction Results")
@@ -1556,7 +1561,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
     save_message_to_db(st.session_state.current_convo_id, "system", upload_msg, "file_upload", upload_metadata)
     
     # Add user message - show parsing status
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
         st.markdown(f"Parsing uploaded PDF: **{uploaded_file.name}**")
     
     # Run workflow with progress tracking for multi-turn extraction
@@ -1636,7 +1641,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
                 st.session_state.cached_full_text = result["full_text"]
             
             # Show extraction results in tabs
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                 st.markdown("### Extraction Results")
                 create_extraction_results_tabs(result)
             
@@ -1646,7 +1651,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
             save_extraction_state(st.session_state.current_convo_id, result)
             
             # Stream the summary
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                 message_placeholder = st.empty()
                 full_response = ""
                 
@@ -1699,7 +1704,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
         
         # Add user message
         st.session_state.messages.append({"role": "user", "content": f"URL: {url_input}"})
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=AVATAR_USER):
             st.markdown(f"URL: {url_input}")
         save_message_to_db(st.session_state.current_convo_id, "user", f"URL: {url_input}")
         
@@ -1746,7 +1751,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                         st.session_state.cached_full_text = result["full_text"]
                     
                     # Show extraction results in tabs
-                    with st.chat_message("assistant"):
+                    with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                         st.markdown("### Extraction Results")
                         create_extraction_results_tabs(result)
                     
@@ -1756,7 +1761,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                     save_extraction_state(st.session_state.current_convo_id, result)
                     
                     # Stream summary
-                    with st.chat_message("assistant"):
+                    with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                         message_placeholder = st.empty()
                         full_response = ""
                         
@@ -1770,7 +1775,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                     save_message_to_db(st.session_state.current_convo_id, "assistant", full_response)
                     
                     # Add PDF download button in chat
-                    with st.chat_message("assistant"):
+                    with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
                         col1, col2, col3 = st.columns([1, 3, 1])
                         with col1:
                             try:
@@ -1796,12 +1801,12 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
     else:
         # Handle regular chat questions
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=AVATAR_USER):
             st.markdown(prompt)
         save_message_to_db(st.session_state.current_convo_id, "user", prompt)
         
         # Generate response with streaming
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
             # Check if this might be a RAG query (even without existing state)
             from langgraph_custom.langgraph_workflow import should_use_rag_tool
             
