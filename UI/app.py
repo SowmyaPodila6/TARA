@@ -436,15 +436,8 @@ def _render_json_sections(json_data, field_info, prefix):
         has_data = content and content.strip() and len(content.strip()) > 10
         status = "✅" if has_data else "❌"
         
-        # Create expander with enhanced page reference info
-        if page_refs:
-            page_info = f" 📄 Pages: {', '.join(map(str, page_refs))}"
-            page_color = "🟢" if len(page_refs) > 1 else "🔵"
-        else:
-            page_info = " ❓ No page refs"
-            page_color = "⚪"
-        
-        with st.expander(f"{icon} {title} {status}{page_info}", expanded=False):
+        # Shorter expander label — move page refs into the body
+        with st.expander(f"{icon} {title}  —  {status}", expanded=False):
             if has_data:
                 # Enhanced metadata section
                 col1, col2, col3 = st.columns([1, 1, 1])
@@ -1313,6 +1306,24 @@ st.markdown("""
         font-weight: 500;
         font-size: 0.95rem;
         border-radius: 8px;
+    }
+    /* Prevent text overlap with expander arrows */
+    .streamlit-expanderHeader p,
+    [data-testid="stExpander"] summary span,
+    [data-testid="stExpander"] details summary {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        padding-right: 1.5rem !important;
+    }
+    [data-testid="stExpander"] summary {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+    }
+    [data-testid="stExpander"] summary svg {
+        flex-shrink: 0 !important;
+        min-width: 1rem !important;
     }
 
     /* ── Metrics ── */
