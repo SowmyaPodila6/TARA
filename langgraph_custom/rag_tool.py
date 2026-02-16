@@ -124,7 +124,7 @@ class ClinicalTrialSearchTool(BaseTool):
             
             # Format results for LangGraph response
             response_parts = [
-                f"Found {len(results)} similar clinical trials for '{search_query}':\\n"
+                f"Found {len(results)} similar clinical trials for '{search_query}':\n"
             ]
             
             for i, study in enumerate(results, 1):
@@ -165,7 +165,7 @@ class ClinicalTrialSearchTool(BaseTool):
                 "- Review interventions to understand treatment approaches"
             ])
             
-            return "\\n".join(response_parts)
+            return "\n".join(response_parts)
             
         except Exception as e:
             error_msg = f"Error searching clinical trials: {str(e)}"
@@ -274,7 +274,7 @@ def test_tool_functionality(db_path: str = "db/clinical_trials_vectordb"):
         result = tool._run("pembrolizumab", n_results=3)
         print("Test Result:")
         print(result)
-        print("\\n" + "="*50 + "\\n")
+        print("\n" + "="*50 + "\n")
         
         return True
         

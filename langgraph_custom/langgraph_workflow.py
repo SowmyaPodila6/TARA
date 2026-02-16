@@ -17,6 +17,9 @@ import os
 import time
 import logging
 
+# Initialize logger
+logger = logging.getLogger(__name__)
+
 # Import parsers - use EnhancedClinicalTrialParser for better accuracy
 from langgraph_custom.enhanced_parser import EnhancedClinicalTrialParser, ClinicalTrialData
 
@@ -41,9 +44,6 @@ except Exception as e:
     logger.error(f"RAG tool failed to load: {e}")
 
 load_dotenv()
-
-# Initialize logger
-logger = logging.getLogger(__name__)
 
 
 _api_key_resolved = False

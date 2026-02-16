@@ -125,7 +125,7 @@ class ClinicalTrialsVectorDB:
         if metadata.get("keywords"):
             doc_parts.append(f"KEYWORDS: {', '.join(metadata['keywords'][:20])}")  # Limit keywords
         
-        return "\\n\\n".join(doc_parts)
+        return "\n\n".join(doc_parts)
     
     def _create_metadata(self, study_data: Dict[str, Any]) -> Dict[str, Any]:
         """

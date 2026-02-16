@@ -1475,6 +1475,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                     "input_type": "unknown",
                     "raw_data": {},
                     "parsed_json": {},
+                    "parser_only_json": {},
                     "data_to_summarize": {},
                     "confidence_score": 0.0,
                     "completeness_score": 0.0,
@@ -1484,7 +1485,13 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                     "chat_response": "",
                     "stream_response": None,
                     "error": "",
-                    "used_llm_fallback": False
+                    "used_llm_fallback": False,
+                    "extraction_progress": {},
+                    "extraction_cost_estimate": {},
+                    "progress_log": [],
+                    "full_text": "",
+                    "use_rag_tool": False,
+                    "rag_tool_results": ""
                 }
                 
                 # Process through workflow
