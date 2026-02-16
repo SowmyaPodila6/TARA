@@ -1806,12 +1806,19 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
         # Generate response with streaming
         with st.chat_message("assistant", avatar=AVATAR_ASSISTANT):
             # Check if this might be a RAG query (even without existing state)
-            from langgraph_custom.langgraph_workflow import should_use_rag_tool
+            from langgraph_custom.langgraph_workflow import should_use_rag_tool, rag_search_node
             
             if st.session_state.current_state:
                 # Update state with new query
                 chat_state = st.session_state.current_state.copy()
                 chat_state["chat_query"] = prompt
+                
+                # If this is a RAG query, run the RAG search first so
+                # chat_node_stream has the results to work with.
+                if should_use_rag_tool(prompt):
+                    chat_state["use_rag_tool"] = False
+                    chat_state["rag_tool_results"] = ""
+                    chat_state = rag_search_node(chat_state)
                 
                 message_placeholder = st.empty()
                 full_response = ""
