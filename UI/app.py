@@ -34,8 +34,8 @@ except Exception:
 load_dotenv()
 
 # Chat avatar constants – Material Design icons for a clean professional look
-AVATAR_ASSISTANT = ":material/biotech:"   # science/clinical theme
-AVATAR_USER = ":material/person:"         # minimal human silhouette
+AVATAR_ASSISTANT = ":material/smart_toy:"   # clean AI/robot icon
+AVATAR_USER = ":material/person:"           # minimal human silhouette
 
 # Cache the workflow to avoid rebuilding on every page load
 @st.cache_resource
