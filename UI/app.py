@@ -241,7 +241,7 @@ def create_extraction_results_tabs(state):
             st.session_state.ui_state["active_extraction_tab"] = st.session_state.extraction_tab_selector
     
     # Create tabs with selection state and callback
-    tab_names = ["📊 Extraction Metrics", "📄 View JSON"]
+    tab_names = ["Extraction Metrics", "View JSON"]
     selected_tab = st.radio(
         "Select View", 
         options=list(range(len(tab_names))),
@@ -268,7 +268,7 @@ def create_extraction_results_tabs(state):
             st.markdown(f"**Input Type:** {input_type.upper()}")
         with col_b:
             st.markdown(f"**Extraction Method:**")
-            st.markdown(f"{'🤖 Parser + LLM (Multi-turn)' if used_llm_fallback else '📄 Parser Only'}")
+            st.markdown(f"{'Parser + LLM (Multi-turn)' if used_llm_fallback else 'Parser Only'}")
         
         st.divider()
         
@@ -298,14 +298,14 @@ def create_extraction_results_tabs(state):
             for field in missing_fields[:5]:
                 st.write(f"• {field.replace('_', ' ').title()}")
         else:
-            st.success("✅ All fields extracted successfully!")
+            st.success("All fields extracted successfully!")
         
         # Show LLM extraction details if used
         if used_llm_fallback:
             cost_est = state.get("extraction_cost_estimate", {})
             if cost_est:
                 st.divider()
-                st.markdown("**💰 Multi-turn Extraction Details:**")
+                st.markdown("**Multi-turn Extraction Details:**")
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric("Cost", f"${cost_est.get('total_cost', 0):.3f}")
@@ -321,16 +321,16 @@ def create_extraction_results_tabs(state):
         # Force refresh check for debugging
         ui_state = st.session_state.get("ui_state", {})
         if ui_state.get("force_json_refresh"):
-            st.info("🔄 **Status:** Displaying refreshed JSON data after re-extraction")
+            st.info("Displaying refreshed JSON data after re-extraction.")
         
         create_json_view_tabs(current_state)
         
         # Add regenerate summary button at the bottom
         st.divider()
-        st.markdown("### 🔄 Regenerate Summary")
-        st.caption("After reviewing and refining the extracted fields, click below to regenerate the summary with updated data")
+        st.markdown("### Regenerate Summary")
+        st.caption("After reviewing and refining the extracted fields, click below to regenerate the summary with updated data.")
         
-        if st.button("🔄 Regenerate Summary", key="regenerate_summary_btn", use_container_width=True, type="primary"):
+        if st.button("Regenerate Summary", key="regenerate_summary_btn", use_container_width=True, type="primary"):
             # Use the most current state from session_state if available
             current_state = st.session_state.get('current_state', state)
             _regenerate_summary(current_state)
@@ -349,20 +349,20 @@ def create_json_view_tabs(state):
     
     # Define field metadata
     field_info = {
-        "study_overview": {"icon": "📋", "title": "Study Overview"},
-        "brief_description": {"icon": "📝", "title": "Brief Description"},
-        "primary_secondary_objectives": {"icon": "🎯", "title": "Primary & Secondary Objectives"},
-        "treatment_arms_interventions": {"icon": "💊", "title": "Treatment Arms & Interventions"},
-        "eligibility_criteria": {"icon": "✅", "title": "Eligibility Criteria"},
-        "enrollment_participant_flow": {"icon": "👥", "title": "Enrollment & Participant Flow"},
-        "adverse_events_profile": {"icon": "⚠️", "title": "Adverse Events Profile"},
-        "study_locations": {"icon": "📍", "title": "Study Locations"},
-        "sponsor_information": {"icon": "🏢", "title": "Sponsor Information"}
+        "study_overview": {"title": "Study Overview"},
+        "brief_description": {"title": "Brief Description"},
+        "primary_secondary_objectives": {"title": "Primary & Secondary Objectives"},
+        "treatment_arms_interventions": {"title": "Treatment Arms & Interventions"},
+        "eligibility_criteria": {"title": "Eligibility Criteria"},
+        "enrollment_participant_flow": {"title": "Enrollment & Participant Flow"},
+        "adverse_events_profile": {"title": "Adverse Events Profile"},
+        "study_locations": {"title": "Study Locations"},
+        "sponsor_information": {"title": "Sponsor Information"}
     }
     
     if used_llm and parser_json:
         # Create tabs for parser vs LLM comparison
-        tab1, tab2 = st.tabs(["🤖 Final JSON (LLM Enhanced)", "📄 Parser Output"])
+        tab1, tab2 = st.tabs(["Final JSON (LLM Enhanced)", "Parser Output"])
         
         with tab1:
             st.markdown("**LLM-Enhanced Extraction Results**")
@@ -371,7 +371,7 @@ def create_json_view_tabs(state):
             # Download button
             json_str = json.dumps(parsed_json, indent=2)
             st.download_button(
-                label="📥 Download LLM JSON",
+                label="Download LLM JSON",
                 data=json_str,
                 file_name=f"llm_enhanced_{nct_id}.json",
                 mime="application/json",
@@ -386,7 +386,7 @@ def create_json_view_tabs(state):
             # Download button
             parser_json_str = json.dumps(parser_json, indent=2)
             st.download_button(
-                label="📥 Download Parser JSON",
+                label="Download Parser JSON",
                 data=parser_json_str,
                 file_name=f"parser_only_{nct_id}.json",
                 mime="application/json",
@@ -395,13 +395,13 @@ def create_json_view_tabs(state):
             )
     else:
         # Single tab for parser-only results
-        st.markdown("**📊 Extracted Data (JSON Format)**")
+        st.markdown("**Extracted Data (JSON Format)**")
         _render_json_sections(parsed_json, field_info, "parsed")
         
         # Download button
         json_str = json.dumps(parsed_json, indent=2)
         st.download_button(
-            label="📥 Download JSON",
+            label="Download JSON",
             data=json_str,
             file_name=f"extracted_data_{nct_id}.json",
             mime="application/json",
@@ -416,8 +416,7 @@ def _render_json_sections(json_data, field_info, prefix):
         return
     
     for field, value in json_data.items():
-        info = field_info.get(field, {"icon": "📄", "title": field.replace('_', ' ').title()})
-        icon = info["icon"]
+        info = field_info.get(field, {"title": field.replace('_', ' ').title()})
         title = info["title"]
         
         # Handle both old string format and new dict format with page references
@@ -434,31 +433,31 @@ def _render_json_sections(json_data, field_info, prefix):
         
         # Check if field has data
         has_data = content and content.strip() and len(content.strip()) > 10
-        status = "✅" if has_data else "❌"
+        status = "Extracted" if has_data else "Missing"
         
         # Shorter expander label - move page refs into the body
-        with st.expander(f"{icon} {title} | {status}", expanded=False):
+        with st.expander(f"{title}  |  {status}", expanded=False):
             if has_data:
                 # Enhanced metadata section
                 col1, col2, col3 = st.columns([1, 1, 1])
                 with col1:
                     # Safely handle content split - ensure it's a string
                     word_count = len(str(content).split()) if content else 0
-                    st.caption(f"📊 **{word_count:,} words**")
+                    st.caption(f"**{word_count:,} words**")
                 with col2:
                     if page_refs:
                         page_display = ", ".join(map(str, page_refs))
-                        st.caption(f"📄 **Pages: {page_display}**")
+                        st.caption(f"**Pages: {page_display}**")
                     else:
-                        st.caption("📄 **No page references**")
+                        st.caption("**No page references**")
                 with col3:
                     # Show data quality indicator
                     if len(page_refs) > 1:
-                        st.caption("✨ **Multi-page extraction**")
+                        st.caption("**Multi-page extraction**")
                     elif len(page_refs) == 1:
-                        st.caption("📍 **Single-page source**")
+                        st.caption("**Single-page source**")
                     else:
-                        st.caption("⚠️ **Missing page info**")
+                        st.caption("**Missing page info**")
                 
                 # Show content in a text area for easy copying
                 st.text_area(
@@ -471,27 +470,27 @@ def _render_json_sections(json_data, field_info, prefix):
                 
                 # Add content analysis
                 if page_refs:
-                    with st.expander("🔍 **Content Analysis**", expanded=False):
+                    with st.expander("Content Analysis", expanded=False):
                         st.markdown(f"**Source Quality:** {'High' if len(page_refs) > 1 else 'Medium' if len(page_refs) == 1 else 'Low'}")
                         st.markdown(f"**Page Coverage:** {len(page_refs)} page(s) referenced")
                         st.markdown(f"**Content Length:** {word_count:,} words ({len(str(content)):,} characters)")
                         
                         if len(page_refs) > 1:
-                            st.success("✅ Multi-page extraction suggests comprehensive coverage")
+                            st.success("Multi-page extraction suggests comprehensive coverage")
                         elif len(page_refs) == 1:
-                            st.info("ℹ️ Single-page source - may be concise or incomplete")
+                            st.info("Single-page source - may be concise or incomplete")
                         else:
-                            st.warning("⚠️ No page tracking - extraction quality uncertain")
+                            st.warning("No page tracking - extraction quality uncertain")
                 
                 # Human-in-the-loop review section
                 st.markdown("---")
-                st.markdown("**🔍 Review Extraction**")
+                st.markdown("**Review Extraction**")
                 
                 col_approve, col_refine = st.columns([1, 2])
                 
                 with col_approve:
                     approve_btn = st.button(
-                        "✅ Approve",
+                        "Approve",
                         key=f"approve_{prefix}_{field}",
                         help="Mark this extraction as correct",
                         use_container_width=True
@@ -506,7 +505,7 @@ def _render_json_sections(json_data, field_info, prefix):
                 
                 with col_refine:
                     refine_btn = st.button(
-                        "🔧 Request Refinement",
+                        "Request Refinement",
                         key=f"refine_{prefix}_{field}",
                         help="Provide feedback to improve this extraction",
                         use_container_width=True
@@ -528,7 +527,7 @@ def _render_json_sections(json_data, field_info, prefix):
                     
                     # Show success message if recently re-extracted
                     if st.session_state.get(f"reextracted_{field}", False):
-                        st.success(f"✅ {field.replace('_', ' ').title()} was successfully re-extracted!")
+                        st.success(f"{field.replace('_', ' ').title()} was successfully re-extracted!")
                         # Clear the re-extraction flag after showing message
                         del st.session_state[f"reextracted_{field}"]
                     
@@ -541,7 +540,7 @@ def _render_json_sections(json_data, field_info, prefix):
                     
                     col_submit, col_cancel = st.columns([1, 1])
                     with col_submit:
-                        if st.button("🔄 Re-extract with Feedback", key=f"reextract_{prefix}_{field}", use_container_width=True, type="primary"):
+                        if st.button("Re-extract with Feedback", key=f"reextract_{prefix}_{field}", use_container_width=True, type="primary"):
                             if feedback and feedback.strip():
                                 # Store refinement request in session state
                                 if "refinement_requests" not in st.session_state:
@@ -556,7 +555,7 @@ def _render_json_sections(json_data, field_info, prefix):
                                 st.warning("Please provide specific feedback for refinement")
                     
                     with col_cancel:
-                        if st.button("❌ Cancel", key=f"cancel_refine_{prefix}_{field}", use_container_width=True):
+                        if st.button("Cancel", key=f"cancel_refine_{prefix}_{field}", use_container_width=True):
                             # Clear the refinement UI
                             if f"show_refine_{field}" in st.session_state:
                                 del st.session_state[f"show_refine_{field}"]
@@ -570,7 +569,7 @@ def _render_json_sections(json_data, field_info, prefix):
                 st.warning("No data extracted for this field")
                 
                 # Option to manually trigger extraction for empty fields
-                if st.button(f"🔄 Retry Extraction", key=f"retry_{prefix}_{field}"):
+                if st.button(f"Retry Extraction", key=f"retry_{prefix}_{field}"):
                     st.info(f"Retrying extraction for {title}...")
                     _reextract_field_with_feedback(field, "Field was empty, please try to extract again with more focus")
 
@@ -613,16 +612,16 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                 file_info = get_uploaded_file_path(st.session_state.current_convo_id)
                 if file_info:
                     file_path, original_filename = file_info
-                    st.info(f"📁 Using stored file: {original_filename}")
+                    st.info(f"Using stored file: {original_filename}")
                 else:
-                    st.error("⚠️ PDF file no longer available and not found in database.")
-                    st.info("💡 To re-extract this field, please upload the PDF document again in a new chat session.")
+                    st.error("PDF file no longer available and not found in database.")
+                    st.info("To re-extract this field, please upload the PDF document again in a new chat session.")
                     return
             
             # Check if the file exists now
             if not os.path.exists(file_path):
-                st.error(f"⚠️ PDF file not found at: {file_path}")
-                st.info("💡 The file may have been moved or deleted. Please upload the document again.")
+                st.error(f"PDF file not found at: {file_path}")
+                st.info("The file may have been moved or deleted. Please upload the document again.")
                 return
             
             # Extract and cache full text
@@ -706,7 +705,7 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                 save_extraction_state(st.session_state.current_convo_id, st.session_state.current_state)
                 
                 # Save re-extraction to conversation history with detailed metadata
-                reextraction_msg = f"🔄 Re-extracted {field_name.replace('_', ' ').title()} with feedback: {feedback}"
+                reextraction_msg = f"Re-extracted {field_name.replace('_', ' ').title()} with feedback: {feedback}"
                 metadata = {
                     "action": "re-extraction",
                     "field": field_name,
@@ -720,7 +719,7 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                 # Also show the actual re-extracted content in chat
                 content = refined_result.get("content", "") if isinstance(refined_result, dict) else str(refined_result) if refined_result else ""
                 if content:
-                    reextracted_content_msg = f"**📋 Updated {field_name.replace('_', ' ').title()}:**\n\n{content[:500]}{'...' if len(content) > 500 else ''}"
+                    reextracted_content_msg = f"**Updated {field_name.replace('_', ' ').title()}:**\n\n{content[:500]}{'...' if len(content) > 500 else ''}"
                     st.session_state.messages.append({"role": "assistant", "content": reextracted_content_msg, "type": "re-extracted_content"})
                     save_message_to_db(st.session_state.current_convo_id, "assistant", reextracted_content_msg, "re-extracted_content", {
                         "field": field_name,
@@ -742,8 +741,8 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                     del st.session_state[f"show_refine_{field_name}"]
                 
                 # Show success without full page rerun - let the UI update naturally
-                st.success(f"✅ Re-extraction completed! Field '{field_name}' has been updated.")
-                st.info("💡 The updated results are now visible in the View JSON tab below.")
+                st.success(f"Re-extraction completed! Field '{field_name}' has been updated.")
+                st.info("The updated results are now visible in the View JSON tab below.")
                 
                 # Use rerun to update the display
                 st.rerun()
@@ -758,7 +757,7 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                     "error": "extraction_failed"
                 }
                 save_message_to_db(st.session_state.current_convo_id, "system", 
-                                 f"❌ Re-extraction failed for {field_name.replace('_', ' ').title()}", 
+                                 f"Re-extraction failed for {field_name.replace('_', ' ').title()}", 
                                  "re-extraction", failure_metadata)
         
     except Exception as e:
@@ -772,7 +771,7 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
             "error": str(e)
         }
         save_message_to_db(st.session_state.current_convo_id, "system", 
-                         f"⚠️ Re-extraction error for {field_name.replace('_', ' ').title()}: {str(e)}", 
+                         f"Re-extraction error for {field_name.replace('_', ' ').title()}: {str(e)}", 
                          "error", error_metadata)
 
 def _auto_reextract_empty_fields():
@@ -797,18 +796,18 @@ def _auto_reextract_empty_fields():
             empty_fields.append(field)
     
     if not empty_fields:
-        st.info("🎉 All fields already have substantial content!")
+        st.info("All fields already have substantial content!")
         return
     
     # Show which fields will be re-extracted
-    st.info(f"📋 Found {len(empty_fields)} fields to re-extract: {', '.join([f.replace('_', ' ').title() for f in empty_fields])}")
+    st.info(f"Found {len(empty_fields)} fields to re-extract: {', '.join([f.replace('_', ' ').title() for f in empty_fields])}")
     
     # Process each empty field individually
     success_count = 0
     failed_fields = []
     
     for i, field in enumerate(empty_fields):
-        with st.spinner(f"🔄 Re-extracting field {i+1}/{len(empty_fields)}: {field.replace('_', ' ').title()}..."):
+        with st.spinner(f"Re-extracting field {i+1}/{len(empty_fields)}: {field.replace('_', ' ').title()}..."):
             try:
                 from langgraph_custom.multi_turn_extractor import MultiTurnExtractor
                 
@@ -866,12 +865,12 @@ def _auto_reextract_empty_fields():
                         state["data_to_summarize"][display_key] = content
                     
                     success_count += 1
-                    st.success(f"✅ {field.replace('_', ' ').title()}")
+                    st.success(f"{field.replace('_', ' ').title()}")
                     
                     # Show the extracted content in chat for this field
                     content = refined_result.get("content", "") if isinstance(refined_result, dict) else str(refined_result) if refined_result else ""
                     if content:
-                        field_content_msg = f"**📋 Auto-extracted {field.replace('_', ' ').title()}:**\n\n{content[:300]}{'...' if len(content) > 300 else ''}"
+                        field_content_msg = f"**Auto-extracted {field.replace('_', ' ').title()}:**\n\n{content[:300]}{'...' if len(content) > 300 else ''}"
                         st.session_state.messages.append({"role": "assistant", "content": field_content_msg, "type": "auto_extracted_content"})
                         save_message_to_db(st.session_state.current_convo_id, "assistant", field_content_msg, "auto_extracted_content", {
                             "field": field,
@@ -883,14 +882,14 @@ def _auto_reextract_empty_fields():
                     
             except Exception as e:
                 failed_fields.append(field)
-                st.error(f"❌ {field.replace('_', ' ').title()}: {str(e)}")
+                st.error(f"{field.replace('_', ' ').title()}: {str(e)}")
     
     # Save updated state
     if success_count > 0:
         save_extraction_state(st.session_state.current_convo_id, state)
         
         # Log the auto re-extraction activity
-        auto_reextract_msg = f"🔄 Auto re-extracted {success_count} empty fields"
+        auto_reextract_msg = f"Auto re-extracted {success_count} empty fields"
         metadata = {
             "action": "auto_re_extraction",
             "success_count": success_count,
@@ -903,25 +902,25 @@ def _auto_reextract_empty_fields():
         # Add summary of what was extracted
         if success_count > 0:
             successful_fields = [f for f in empty_fields if f not in failed_fields]
-            summary_msg = f"✅ **Auto-extraction complete!** Successfully extracted content for: {', '.join([f.replace('_', ' ').title() for f in successful_fields])}"
+            summary_msg = f"**Auto-extraction complete.** Successfully extracted content for: {', '.join([f.replace('_', ' ').title() for f in successful_fields])}"
             if failed_fields:
-                summary_msg += f"\n\n⚠️ Failed to extract: {', '.join([f.replace('_', ' ').title() for f in failed_fields])}"
+                summary_msg += f"\n\nFailed to extract: {', '.join([f.replace('_', ' ').title() for f in failed_fields])}"
             st.session_state.messages.append({"role": "assistant", "content": summary_msg, "type": "auto_extraction_summary"})
             save_message_to_db(st.session_state.current_convo_id, "assistant", summary_msg, "auto_extraction_summary", metadata)
     
     # Show final results
     if success_count > 0:
-        st.success(f"✅ Successfully re-extracted {success_count} out of {len(empty_fields)} fields!")
+        st.success(f"Successfully re-extracted {success_count} out of {len(empty_fields)} fields!")
         if failed_fields:
-            st.warning(f"⚠️ Failed to re-extract: {', '.join([f.replace('_', ' ').title() for f in failed_fields])}")
-        st.info("💡 Check the View JSON tab to see the updated results.")
+            st.warning(f"Failed to re-extract: {', '.join([f.replace('_', ' ').title() for f in failed_fields])}")
+        st.info("Check the View JSON tab to see the updated results.")
         
         # Switch to JSON view to show results
         st.session_state.ui_state["active_extraction_tab"] = 1
         time.sleep(1)
         st.rerun()
     else:
-        st.error("❌ Failed to re-extract any empty fields. Please try manual re-extraction with specific feedback.")
+        st.error("Failed to re-extract any empty fields. Please try manual re-extraction with specific feedback.")
 
 def _regenerate_summary(state):
     """Regenerate summary with updated extracted data"""
@@ -933,7 +932,7 @@ def _regenerate_summary(state):
             st.error("No extraction data available to generate summary from.")
             return
         
-        with st.spinner("🔄 Regenerating summary with updated data..."):
+        with st.spinner("Regenerating summary with updated data..."):
             # Update data_to_summarize with current parsed_json
             field_mapping = {
                 "study_overview": "Study Overview",
@@ -974,7 +973,7 @@ def _regenerate_summary(state):
             
             # Generate new summary
             with st.chat_message("assistant"):
-                st.markdown("### 📝 Updated Summary")
+                st.markdown("### Updated Summary")
                 message_placeholder = st.empty()
                 full_response = ""
                 
@@ -991,7 +990,7 @@ def _regenerate_summary(state):
                     try:
                         pdf_data = create_summary_pdf(full_response, state.get('nct_id', 'study'))
                         st.download_button(
-                            label="📄 Download PDF",
+                            label="Download PDF",
                             data=pdf_data,
                             file_name=f"summary_{state.get('nct_id', 'study')}_updated_{int(time.time())}.pdf",
                             mime="application/pdf",
@@ -1011,7 +1010,7 @@ def _regenerate_summary(state):
             }
             
             # Add a brief regeneration notice before the full summary
-            regen_notice = f"🔄 **Summary Regenerated** using {fields_with_content} fields from {state.get('nct_id', 'the study')}"
+            regen_notice = f"**Summary Regenerated** using {fields_with_content} fields from {state.get('nct_id', 'the study')}"
             st.session_state.messages.append({"role": "system", "content": regen_notice, "type": "regeneration_notice"})
             save_message_to_db(st.session_state.current_convo_id, "system", regen_notice, "regeneration_notice", summary_metadata)
             
@@ -1023,7 +1022,7 @@ def _regenerate_summary(state):
             state["last_summary_regenerated"] = time.time()
             save_extraction_state(st.session_state.current_convo_id, state)
             
-            st.success("✅ Summary regenerated successfully! You can regenerate again anytime as you continue refining fields.")
+            st.success("Summary regenerated successfully! You can regenerate again anytime as you continue refining fields.")
             
     except Exception as e:
         st.error(f"Error regenerating summary: {str(e)}")
@@ -1145,7 +1144,7 @@ def create_summary_pdf(summary_text, nct_id):
 # Page configuration
 st.set_page_config(
     page_title="TARA – Textual Analysis & Regulatory Assistant",
-    page_icon="🔬",
+    page_icon="T",
     layout="wide"
 )
 
@@ -1415,7 +1414,7 @@ st.sidebar.markdown("""
     <p style="color: #94a3b8; font-size: 0.72em; margin: 2px 0 0 0; font-weight: 500; letter-spacing: 0.04em;">TEXTUAL ANALYSIS & REGULATORY ASSISTANT</p>
 </div>
 """, unsafe_allow_html=True)
-st.sidebar.button("➕ Start New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
+st.sidebar.button("+ New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
 
 # Remove browser tooltip ("title" attribute) from all buttons
 st.sidebar.markdown("""
@@ -1434,7 +1433,7 @@ st.sidebar.divider()
 # Use cached conversation list for faster sidebar rendering
 conversations = get_cached_conversations()
 if conversations:
-    st.sidebar.subheader("💬 Past Chats")
+    st.sidebar.subheader("Past Chats")
     
     # Create dropdown options - show "Current" for active conversation
     options = ["Select a conversation..."] + conversations
@@ -1475,40 +1474,34 @@ if conversations:
 
 # Welcome message if no messages
 if not st.session_state.messages:
-    with st.chat_message("assistant", avatar="🔬"):
-        st.markdown("Hey there! 👋 I'm **TARA**, your clinical trials assistant.")
+    with st.chat_message("assistant"):
+        st.markdown("Hello! I'm **TARA**, your clinical trials assistant.")
         st.markdown("Here's how I can help:")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
-    <strong>📄 Upload a Protocol</strong><br>
-    <span style="color: #555; font-size: 0.9em;">Drop a clinical trial PDF or paste a ClinicalTrials.gov URL</span>
-</div>
-""", unsafe_allow_html=True)
-            st.markdown("""
-<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
-    <strong>💬 Ask Me Anything</strong><br>
-    <span style="color: #555; font-size: 0.9em;">Query your study data — eligibility, endpoints, treatment arms & more</span>
-</div>
-""", unsafe_allow_html=True)
-        with col2:
-            st.markdown("""
-<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
-    <strong>🔍 Structured Extraction</strong><br>
-    <span style="color: #555; font-size: 0.9em;">9 key fields auto-extracted into JSON — review, refine & approve</span>
-</div>
-""", unsafe_allow_html=True)
-            st.markdown("""
-<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
-    <strong>🔎 Find Similar Studies</strong><br>
-    <span style="color: #555; font-size: 0.9em;">Search 100+ trials by drug name — e.g. <em>"Find studies using Pembrolizumab"</em></span>
+        # Single HTML grid for pixel-perfect 2x2 alignment
+        st.markdown("""
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 4px 0;">
+  <div style="background: #f0f6ff; border-radius: 10px; padding: 18px 16px; border-left: 4px solid #0066cc; min-height: 82px; display: flex; flex-direction: column; justify-content: center;">
+    <strong style="font-size: 0.95em;">Upload a Protocol</strong>
+    <span style="color: #555; font-size: 0.84em; margin-top: 4px; line-height: 1.35;">Drop a clinical trial PDF or paste a ClinicalTrials.gov URL</span>
+  </div>
+  <div style="background: #f0f6ff; border-radius: 10px; padding: 18px 16px; border-left: 4px solid #0066cc; min-height: 82px; display: flex; flex-direction: column; justify-content: center;">
+    <strong style="font-size: 0.95em;">Structured Extraction</strong>
+    <span style="color: #555; font-size: 0.84em; margin-top: 4px; line-height: 1.35;">9 key fields auto-extracted into JSON &mdash; review, refine &amp; approve</span>
+  </div>
+  <div style="background: #f0f6ff; border-radius: 10px; padding: 18px 16px; border-left: 4px solid #0066cc; min-height: 82px; display: flex; flex-direction: column; justify-content: center;">
+    <strong style="font-size: 0.95em;">Ask Me Anything</strong>
+    <span style="color: #555; font-size: 0.84em; margin-top: 4px; line-height: 1.35;">Query your study data &mdash; eligibility, endpoints, treatment arms &amp; more</span>
+  </div>
+  <div style="background: #f0f6ff; border-radius: 10px; padding: 18px 16px; border-left: 4px solid #0066cc; min-height: 82px; display: flex; flex-direction: column; justify-content: center;">
+    <strong style="font-size: 0.95em;">Find Similar Studies</strong>
+    <span style="color: #555; font-size: 0.84em; margin-top: 4px; line-height: 1.35;">Search 100+ trials by drug name, e.g. &ldquo;Find studies using Pembrolizumab&rdquo;</span>
+  </div>
 </div>
 """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("⚡ **Try it now** — upload a PDF above, paste a URL below, or just ask me something!")
+        st.markdown("**Try it now** — upload a PDF above, paste a URL below, or just ask me something!")
     st.markdown("")
 
 # Display existing chat messages
@@ -1516,7 +1509,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         # Check if this is the extraction results marker
         if message["content"] == "EXTRACTION_RESULTS_MARKER" and st.session_state.current_state:
-            st.markdown("### 📊 Extraction Results")
+            st.markdown("### Extraction Results")
             create_extraction_results_tabs(st.session_state.current_state)
         else:
             st.markdown(message["content"])
@@ -1553,7 +1546,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
     )
     
     # Save upload event to conversation history
-    upload_msg = f"📄 Uploaded PDF: {uploaded_file.name} ({len(uploaded_file.getvalue())} bytes)"
+    upload_msg = f"Uploaded PDF: {uploaded_file.name} ({len(uploaded_file.getvalue())} bytes)"
     upload_metadata = {
         "action": "file_upload",
         "filename": uploaded_file.name,
@@ -1564,7 +1557,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
     
     # Add user message - show parsing status
     with st.chat_message("assistant"):
-        st.markdown(f"🔍 Parsing uploaded PDF: **{uploaded_file.name}**")
+        st.markdown(f"Parsing uploaded PDF: **{uploaded_file.name}**")
     
     # Run workflow with progress tracking for multi-turn extraction
     try:
@@ -1596,7 +1589,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
         }
         
         # Show initial parsing step
-        status_msg.info("🔍 Step 1/3: Analyzing PDF with enhanced parser...")
+        status_msg.info("Step 1/3: Analyzing PDF with enhanced parser...")
         
         # Stream workflow execution to show real-time updates
         result = None
@@ -1612,7 +1605,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
                     if progress_log and len(progress_log) > last_progress_count:
                         # Show only the new messages
                         for i in range(last_progress_count, len(progress_log)):
-                            status_msg.info(f"⚙️ {progress_log[i]}")
+                            status_msg.info(f"{progress_log[i]}")
                         last_progress_count = len(progress_log)
         
         # Use the final result
@@ -1623,7 +1616,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
         if result.get("used_llm_fallback"):
             cost_est = result.get("extraction_cost_estimate", {})
             if cost_est:
-                status_msg.success(f"✅ Multi-turn extraction complete | Cost: ${cost_est.get('total_cost', 0):.3f} | Time: {cost_est.get('estimated_time_minutes', 0):.1f} min")
+                status_msg.success(f"Multi-turn extraction complete | Cost: ${cost_est.get('total_cost', 0):.3f} | Time: {cost_est.get('estimated_time_minutes', 0):.1f} min")
                 import time
                 time.sleep(1)
         
@@ -1644,7 +1637,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
             
             # Show extraction results in tabs
             with st.chat_message("assistant"):
-                st.markdown("### 📊 Extraction Results")
+                st.markdown("### Extraction Results")
                 create_extraction_results_tabs(result)
             
             # Save extraction results message to chat history
@@ -1669,7 +1662,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
                     try:
                         pdf_data = create_summary_pdf(full_response, result.get('nct_id', 'study'))
                         st.download_button(
-                            label="📄 Download PDF",
+                            label="Download PDF",
                             data=pdf_data,
                             file_name=f"summary_{result.get('nct_id', 'study')}.pdf",
                             mime="application/pdf",
@@ -1754,7 +1747,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                     
                     # Show extraction results in tabs
                     with st.chat_message("assistant"):
-                        st.markdown("### 📊 Extraction Results")
+                        st.markdown("### Extraction Results")
                         create_extraction_results_tabs(result)
                     
                     # Save extraction results marker to database for persistence
@@ -1783,7 +1776,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                             try:
                                 pdf_data = create_summary_pdf(full_response, result.get('nct_id', 'study'))
                                 st.download_button(
-                                    label="📄 Download PDF",
+                                    label="Download PDF",
                                     data=pdf_data,
                                     file_name=f"summary_{result.get('nct_id', 'study')}.pdf",
                                     mime="application/pdf",
@@ -1902,13 +1895,13 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                 if any(g in prompt_lower for g in greeting_patterns) or len(prompt_lower) < 10:
                     greeting_response = """Hello! I'm **TARA** – your Textual Analysis & Regulatory Assistant. Here's what I can do:
 
-**📄 Analyze Clinical Trial Documents**
+**Analyze Clinical Trial Documents**
 Upload a PDF protocol or paste a ClinicalTrials.gov URL (e.g., `NCT03991871`) and I'll extract structured data, show metrics, and generate a summary.
 
-**🔎 Find Similar Studies**
+**Find Similar Studies**
 Ask me to search for clinical trials by drug name or intervention — e.g., *"Find studies using Pembrolizumab"* or *"Show me similar trials to this study."*
 
-**💬 Answer Questions**
+**Answer Questions**
 Once a document is loaded, ask me anything about it — eligibility criteria, endpoints, treatment arms, and more.
 
 **How to get started:**
