@@ -1310,23 +1310,21 @@ st.markdown("""
         font-size: 0.95rem;
         border-radius: 8px;
     }
-    /* Prevent text overlap with expander arrows */
+    /* Hide the default expander chevron icon (may render as odd glyph) */
+    [data-testid="stExpander"] summary svg {
+        display: none !important;
+    }
+    /* Clean expander label styling */
     .streamlit-expanderHeader p,
     [data-testid="stExpander"] summary span,
     [data-testid="stExpander"] details summary {
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
-        padding-right: 1.5rem !important;
     }
     [data-testid="stExpander"] summary {
         display: flex !important;
         align-items: center !important;
-        gap: 0.25rem !important;
-    }
-    [data-testid="stExpander"] summary svg {
-        flex-shrink: 0 !important;
-        min-width: 1rem !important;
     }
 
     /* ── Metrics ── */
