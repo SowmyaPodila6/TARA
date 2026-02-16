@@ -1578,7 +1578,10 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
             "used_llm_fallback": False,
             "extraction_progress": {},
             "extraction_cost_estimate": {},
-            "progress_log": []
+            "progress_log": [],
+            "full_text": "",
+            "use_rag_tool": False,
+            "rag_tool_results": ""
         }
         
         # Show initial parsing step

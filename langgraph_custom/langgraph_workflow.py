@@ -1080,7 +1080,7 @@ def llm_fallback(state: WorkflowState) -> WorkflowState:
                                 for match in matches[:3]:  # Check first 3 matches
                                     # Look backwards for page marker
                                     text_before = full_text_for_pages[:match.start()]
-                                    page_matches = list(re.finditer(r'--- Page (\\d+) ---', text_before))
+                                    page_matches = list(re.finditer(r'--- Page (\d+) ---', text_before))
                                     if page_matches:
                                         try:
                                             page_num = int(page_matches[-1].group(1))
