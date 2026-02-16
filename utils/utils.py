@@ -218,7 +218,8 @@ def create_summary_pdf(summary_text: str, nct_id: str) -> bytes:
             except Exception:
                 continue
 
-        return pdf.output(dest='S').encode('latin1', 'ignore')
+        result = pdf.output()
+        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
         
     except Exception as e:
         # Fallback error PDF
@@ -228,7 +229,8 @@ def create_summary_pdf(summary_text: str, nct_id: str) -> bytes:
         pdf.cell(0, 10, "PDF Generation Error", ln=True)
         pdf.cell(0, 10, f"NCT ID: {nct_id}", ln=True)
         pdf.cell(0, 10, "Please download the summary as text instead.", ln=True)
-        return pdf.output(dest='S').encode('latin1', 'ignore')
+        result = pdf.output()
+        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
 
 
 # ============================================================================

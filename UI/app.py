@@ -1005,7 +1005,7 @@ def _regenerate_summary(state):
                             key=f"regenerated_pdf_download_{int(time.time())}"
                         )
                     except Exception as e:
-                        st.error("PDF error")
+                        st.error(f"PDF error: {e}")
                 st.markdown("---")
             
             # Save to messages and database with metadata to indicate regenerated summary
@@ -1120,8 +1120,8 @@ def create_summary_pdf(summary_text, nct_id):
             except:
                 continue
 
-        result = pdf.output(dest='S')
-        return result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
+        result = pdf.output()
+        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
         
     except Exception as e:
         pdf = FPDF()
@@ -1129,8 +1129,8 @@ def create_summary_pdf(summary_text, nct_id):
         pdf.set_font("Arial", size=12)
         pdf.cell(0, 10, "PDF Generation Error", ln=True)
         pdf.cell(0, 10, f"NCT ID: {nct_id}", ln=True)
-        result = pdf.output(dest='S')
-        return result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
+        result = pdf.output()
+        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
 
 # Page configuration
 st.set_page_config(
@@ -1433,7 +1433,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
                             key="pdf_chat_pdf_download"
                         )
                     except Exception as e:
-                        st.error("PDF error")
+                        st.error(f"PDF error: {e}")
                 st.markdown("---")
             
             st.session_state.messages.append({"role": "assistant", "content": full_response})
@@ -1547,7 +1547,7 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                                     key="chat_input_pdf_download"
                                 )
                             except Exception as e:
-                                st.error("PDF error")
+                                st.error(f"PDF error: {e}")
                         st.markdown("---")
                     
                     st.rerun()
