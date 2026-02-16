@@ -1,15 +1,15 @@
 # TARA – Textual Analysis & Regulatory Assistant – Dependencies
 # Core Application
-streamlit>=1.28.0
-openai>=1.0.0
+streamlit>=1.28.0,<2.0.0
+openai>=1.0.0,<2.0.0
 python-dotenv>=1.0.0
 tiktoken>=0.5.0
 
 # LangGraph Workflow Engine
 langgraph>=0.2.0
-langchain>=0.1.0
+langchain>=0.1.0,<1.0.0
 langchain-openai>=0.0.5
-langchain-core>=0.1.0
+langchain-core>=0.1.0,<1.0.0
 langchain-community>=0.0.20
 
 # PDF Processing
@@ -19,32 +19,21 @@ pdfminer.six>=20221105
 Pillow>=10.0.0
 PyPDF2>=3.0.0
 
-# OCR Support (Optional)
-pytesseract>=0.3.10
-
-# NLP Support (Optional)
-spacy>=3.7.0
-
 # Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
 
 # HTTP and Utilities
 requests>=2.31.0
-fpdf>=1.7.2
+fpdf2>=2.7.0
 
 # Vector Database and Embeddings
 chromadb>=0.4.18
 sentence-transformers>=2.2.2
-faiss-cpu>=1.7.4
 
 # Visualization and Development
 graphviz>=0.20.0
 matplotlib>=3.7.0
-
-# Testing Framework
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
 
 # Document Generation (Utilities)
 python-docx>=0.8.11

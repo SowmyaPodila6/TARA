@@ -47,17 +47,14 @@ def get_cached_conversations():
 
 # Database functions (same as app_v1)
 DB_FILE = str(parent_dir / "data" / "chat_history.db")
+_db_initialized = False
 
-def get_db_connection():
-    # Ensure the database directory exists
-    db_dir = os.path.dirname(DB_FILE)
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
-    
-    conn = sqlite3.connect(DB_FILE)
+def _ensure_db_schema(conn):
+    """Run schema migration once per process lifetime."""
+    global _db_initialized
+    if _db_initialized:
+        return
     c = conn.cursor()
-    
-    # Create base table first
     c.execute('''
         CREATE TABLE IF NOT EXISTS chat_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,23 +63,15 @@ def get_db_connection():
             content TEXT NOT NULL
         )
     ''')
-    
-    # Check if new columns exist and add them if they don't
     c.execute("PRAGMA table_info(chat_messages)")
     columns = [row[1] for row in c.fetchall()]
-    
     if 'message_type' not in columns:
         c.execute('ALTER TABLE chat_messages ADD COLUMN message_type TEXT DEFAULT "text"')
-    
     if 'metadata' not in columns:
         c.execute('ALTER TABLE chat_messages ADD COLUMN metadata TEXT DEFAULT NULL')
-        
     if 'timestamp' not in columns:
-        # Add timestamp column without default first
         c.execute('ALTER TABLE chat_messages ADD COLUMN timestamp TIMESTAMP')
-        # Then update existing rows to have a timestamp
         c.execute('UPDATE chat_messages SET timestamp = datetime("now") WHERE timestamp IS NULL')
-    
     c.execute('''
         CREATE TABLE IF NOT EXISTS extraction_states (
             conversation_id TEXT PRIMARY KEY,
@@ -102,95 +91,116 @@ def get_db_connection():
         )
     ''')
     conn.commit()
+    _db_initialized = True
+
+def get_db_connection():
+    # Ensure the database directory exists
+    db_dir = os.path.dirname(DB_FILE)
+    if not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+    conn = sqlite3.connect(DB_FILE)
+    _ensure_db_schema(conn)
     return conn
 
 def save_message_to_db(conversation_id, role, content, message_type="text", metadata=None):
     import json
     conn = get_db_connection()
-    c = conn.cursor()
-    metadata_json = json.dumps(metadata) if metadata else None
-    # Use datetime("now") for SQLite timestamp
-    c.execute("""INSERT INTO chat_messages 
-                 (conversation_id, role, content, message_type, metadata, timestamp) 
-                 VALUES (?, ?, ?, ?, ?, datetime('now'))""", 
-              (conversation_id, role, content, message_type, metadata_json))
-    conn.commit()
-    conn.close()
+    try:
+        c = conn.cursor()
+        metadata_json = json.dumps(metadata) if metadata else None
+        c.execute("""INSERT INTO chat_messages 
+                     (conversation_id, role, content, message_type, metadata, timestamp) 
+                     VALUES (?, ?, ?, ?, ?, datetime('now'))""", 
+                  (conversation_id, role, content, message_type, metadata_json))
+        conn.commit()
+    finally:
+        conn.close()
 
 def load_messages_from_db(conversation_id):
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT role, content FROM chat_messages WHERE conversation_id = ? ORDER BY id", 
-              (conversation_id,))
-    messages = [{"role": row[0], "content": row[1]} for row in c.fetchall()]
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT role, content FROM chat_messages WHERE conversation_id = ? ORDER BY id", 
+                  (conversation_id,))
+        messages = [{"role": row[0], "content": row[1]} for row in c.fetchall()]
+    finally:
+        conn.close()
     return messages
 
 def save_extraction_state(conversation_id, state):
     """Save extraction state to database"""
     import json
     conn = get_db_connection()
-    c = conn.cursor()
-    # Only save serializable state data (excluding full_text for storage efficiency)
-    state_to_save = {
-        "parsed_json": state.get("parsed_json", {}),
-        "parser_only_json": state.get("parser_only_json", {}),
-        "data_to_summarize": state.get("data_to_summarize", {}),
-        "confidence_score": state.get("confidence_score", 0.0),
-        "completeness_score": state.get("completeness_score", 0.0),
-        "missing_fields": state.get("missing_fields", []),
-        "nct_id": state.get("nct_id", ""),
-        "input_type": state.get("input_type", "unknown"),
-        "input_url": state.get("input_url", ""),  # Save for re-extraction attempts
-        "used_llm_fallback": state.get("used_llm_fallback", False),
-        "extraction_cost_estimate": state.get("extraction_cost_estimate", {}),
-    }
-    state_json = json.dumps(state_to_save)
-    c.execute("""INSERT OR REPLACE INTO extraction_states 
-                 (conversation_id, state_json, updated_at) 
-                 VALUES (?, ?, datetime('now'))""", 
-              (conversation_id, state_json))
-    conn.commit()
-    conn.close()
+    try:
+        c = conn.cursor()
+        state_to_save = {
+            "parsed_json": state.get("parsed_json", {}),
+            "parser_only_json": state.get("parser_only_json", {}),
+            "data_to_summarize": state.get("data_to_summarize", {}),
+            "confidence_score": state.get("confidence_score", 0.0),
+            "completeness_score": state.get("completeness_score", 0.0),
+            "missing_fields": state.get("missing_fields", []),
+            "nct_id": state.get("nct_id", ""),
+            "input_type": state.get("input_type", "unknown"),
+            "input_url": state.get("input_url", ""),
+            "used_llm_fallback": state.get("used_llm_fallback", False),
+            "extraction_cost_estimate": state.get("extraction_cost_estimate", {}),
+        }
+        state_json = json.dumps(state_to_save)
+        c.execute("""INSERT OR REPLACE INTO extraction_states 
+                     (conversation_id, state_json, updated_at) 
+                     VALUES (?, ?, datetime('now'))""", 
+                  (conversation_id, state_json))
+        conn.commit()
+    finally:
+        conn.close()
 
 def save_uploaded_file(conversation_id, original_filename, stored_filepath, file_size):
     """Save uploaded file information to database"""
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("INSERT INTO uploaded_files (conversation_id, original_filename, stored_filepath, file_size) VALUES (?, ?, ?, ?)", 
-              (conversation_id, original_filename, stored_filepath, file_size))
-    conn.commit()
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("INSERT INTO uploaded_files (conversation_id, original_filename, stored_filepath, file_size) VALUES (?, ?, ?, ?)", 
+                  (conversation_id, original_filename, stored_filepath, file_size))
+        conn.commit()
+    finally:
+        conn.close()
 
 def get_uploaded_file_path(conversation_id):
     """Get stored file path for a conversation"""
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT stored_filepath, original_filename FROM uploaded_files WHERE conversation_id = ? ORDER BY upload_timestamp DESC LIMIT 1", 
-              (conversation_id,))
-    row = c.fetchone()
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT stored_filepath, original_filename FROM uploaded_files WHERE conversation_id = ? ORDER BY upload_timestamp DESC LIMIT 1", 
+                  (conversation_id,))
+        row = c.fetchone()
+    finally:
+        conn.close()
     return row if row else None
 
 def load_extraction_state(conversation_id):
     """Load extraction state from database"""
     import json
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT state_json FROM extraction_states WHERE conversation_id = ?", 
-              (conversation_id,))
-    row = c.fetchone()
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT state_json FROM extraction_states WHERE conversation_id = ?", 
+                  (conversation_id,))
+        row = c.fetchone()
+    finally:
+        conn.close()
     if row:
         return json.loads(row[0])
     return None
 
 def get_all_conversations():
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT DISTINCT conversation_id FROM chat_messages ORDER BY id DESC")
-    conversations = [row[0] for row in c.fetchall()]
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT conversation_id FROM chat_messages ORDER BY id DESC")
+        conversations = [row[0] for row in c.fetchall()]
+    finally:
+        conn.close()
     return conversations
 
 def new_chat_click():
@@ -202,6 +212,7 @@ def new_chat_click():
     st.session_state.cached_full_text = None
     st.session_state.approved_fields = {}
     st.session_state.refinement_requests = {}
+    st.session_state["_last_uploaded_file_name"] = None
     # Set flag to trigger rerun in main flow (st.rerun() doesn't work in callbacks)
     st.session_state.new_chat_requested = True
 
@@ -331,13 +342,9 @@ def create_json_view_tabs(state):
     used_llm = state.get("used_llm_fallback", False)
     nct_id = state.get("nct_id", "study")
     
-    # Debug info for re-extractions
+    # Clear re-extraction refresh flag if set
     ui_state = st.session_state.get("ui_state", {})
     if ui_state.get("force_json_refresh"):
-        last_field = ui_state.get("last_reextraction_field", "unknown")
-        last_time = ui_state.get("last_reextraction_time", 0)
-        st.info(f"🔄 **Debug:** JSON view refreshed after re-extracting '{last_field}' at {time.strftime('%H:%M:%S', time.localtime(last_time))}")
-        # Clear the flag after showing the debug info
         st.session_state.ui_state["force_json_refresh"] = False
     
     # Define field metadata
@@ -743,7 +750,6 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                 
                 # Show success without full page rerun - let the UI update naturally
                 st.success(f"✅ Re-extraction completed! Field '{field_name}' has been updated.")
-                st.info(f"🔍 **Debug Info:** Updated content length: {len(content)} characters")
                 st.info("💡 The updated results are now visible in the View JSON tab below.")
                 
                 # Use rerun to update the display
@@ -1114,7 +1120,8 @@ def create_summary_pdf(summary_text, nct_id):
             except:
                 continue
 
-        return pdf.output(dest='S').encode('latin1', 'ignore')
+        result = pdf.output(dest='S')
+        return result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
         
     except Exception as e:
         pdf = FPDF()
@@ -1122,7 +1129,8 @@ def create_summary_pdf(summary_text, nct_id):
         pdf.set_font("Arial", size=12)
         pdf.cell(0, 10, "PDF Generation Error", ln=True)
         pdf.cell(0, 10, f"NCT ID: {nct_id}", ln=True)
-        return pdf.output(dest='S').encode('latin1', 'ignore')
+        result = pdf.output(dest='S')
+        return result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
 
 # Page configuration
 st.set_page_config(
@@ -1167,6 +1175,9 @@ st.markdown("""
 # Clean header with logo
 logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "tara-logo.png")
 if os.path.exists(logo_path):
+    import base64 as _b64
+    with open(logo_path, 'rb') as _logo_f:
+        _logo_b64 = _b64.b64encode(_logo_f.read()).decode()
     st.markdown("""
         <div style='display: flex; align-items: center; justify-content: center; gap: 25px; margin: 0; padding: 15px 0; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);'>
             <img src='data:image/png;base64,{}' width='110' style='flex-shrink: 0;'/>
@@ -1177,7 +1188,7 @@ if os.path.exists(logo_path):
                 <p style='color: #64748B; margin: 8px 0 0 0; padding: 0; font-size: 1.2em; font-weight: 500; font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>Textual Analysis &amp; Regulatory Assistant</p>
             </div>
         </div>
-    """.format(__import__('base64').b64encode(open(logo_path, 'rb').read()).decode()), unsafe_allow_html=True)
+    """.format(_logo_b64), unsafe_allow_html=True)
 else:
     st.markdown("""
         <div style='text-align: center; margin: 0; padding: 15px 0; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);'>
@@ -1270,118 +1281,15 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-# File uploader - clean minimal design with hidden label
-if not st.session_state.messages:
-    uploaded_file = st.file_uploader(
-        "Upload PDF",
-        type=["pdf"],
-        key="pdf_uploader",
-        label_visibility="hidden"
-    )
-else:
-    uploaded_file = None
-
-# Initialize variables
-url_input = None
-nct_match = None
-
-# Handle initial URL input
-if url_input and nct_match and not st.session_state.messages:
-    nct_number = nct_match.group(0)
-    st.info(f"Found NCT number: **{nct_number}**. Processing through LangGraph workflow...")
-    
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": f"URL: {url_input}"})
-    with st.chat_message("user"):
-        st.markdown(f"URL: {url_input}")
-    save_message_to_db(st.session_state.current_convo_id, "user", f"URL: {url_input}")
-    
-    # Run workflow
-    with st.spinner("Extracting data from ClinicalTrials.gov..."):
-        try:
-            initial_state = {
-                "input_url": url_input,
-                "input_type": "unknown",
-                "raw_data": {},
-                "parsed_json": {},
-                "data_to_summarize": {},
-                "confidence_score": 0.0,
-                "completeness_score": 0.0,
-                "missing_fields": [],
-                "nct_id": "",
-                "chat_query": "generate_summary",
-                "chat_response": "",
-                "stream_response": None,
-                "error": "",
-                "used_llm_fallback": False
-            }
-            
-            # Process through workflow (non-streaming for initial extraction)
-            result = st.session_state.workflow_app.invoke(initial_state)
-            
-            if result.get("error"):
-                st.error(f"Error: {result['error']}")
-                st.session_state.messages.append({"role": "assistant", "content": f"Error: {result['error']}"})
-                save_message_to_db(st.session_state.current_convo_id, "assistant", f"Error: {result['error']}")
-            else:
-                st.session_state.current_state = result
-                
-                # Cache full_text if available to prevent file access issues later
-                if "full_text" in result and result["full_text"]:
-                    st.session_state.cached_full_text = result["full_text"]
-                
-                # Show extraction results in tabs
-                with st.chat_message("assistant"):
-                    st.markdown("### 📊 Extraction Results")
-                    create_extraction_results_tabs(result)
-                
-                # Save extraction results marker to chat history for persistence
-                st.session_state.messages.append({"role": "assistant", "content": "EXTRACTION_RESULTS_MARKER"})
-                save_message_to_db(st.session_state.current_convo_id, "assistant", "EXTRACTION_RESULTS_MARKER")
-                save_extraction_state(st.session_state.current_convo_id, result)
-                
-                # Stream the summary
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-                    
-                    # Use streaming function
-                    for chunk in chat_node_stream(result):
-                        full_response += chunk
-                        message_placeholder.markdown(full_response + "▌")
-                    
-                    message_placeholder.markdown(full_response)
-                    
-                    # Add PDF download button right after summary
-                    col1, col2, col3 = st.columns([1, 3, 1])
-                    with col1:
-                        try:
-                            pdf_data = create_summary_pdf(full_response, result.get('nct_id', 'study'))
-                            st.download_button(
-                                label="📄 Download PDF",
-                                data=pdf_data,
-                                file_name=f"summary_{result.get('nct_id', 'study')}.pdf",
-                                mime="application/pdf",
-                                key="url_initial_pdf_download"
-                            )
-                        except Exception as e:
-                            st.error("PDF error")
-                    st.markdown("---")
-                
-                # Save to database
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-                save_message_to_db(st.session_state.current_convo_id, "assistant", full_response)
-                
-                st.balloons()
-                
-        except Exception as e:
-            error_msg = f"An error occurred: {str(e)}"
-            st.error(error_msg)
-            st.session_state.messages.append({"role": "assistant", "content": error_msg})
-            save_message_to_db(st.session_state.current_convo_id, "assistant", error_msg)
-
-# Handle PDF upload
-if uploaded_file is not None and not st.session_state.messages:
+# File uploader - always visible so users can upload additional PDFs
+uploaded_file = st.file_uploader(
+    "Upload PDF",
+    type=["pdf"],
+    key="pdf_uploader",
+    label_visibility="hidden"
+)
+# Handle PDF upload (works for both initial and mid-conversation uploads)
+if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_name") == uploaded_file.name:
     # Create uploads directory if it doesn't exist
     uploads_dir = Path("uploads")
     uploads_dir.mkdir(exist_ok=True)
@@ -1539,13 +1447,16 @@ if uploaded_file is not None and not st.session_state.messages:
         st.session_state.messages.append({"role": "assistant", "content": error_msg})
         save_message_to_db(st.session_state.current_convo_id, "assistant", error_msg)
 
+    # Track the uploaded file to prevent re-processing on page rerun
+    st.session_state["_last_uploaded_file_name"] = uploaded_file.name
+
 # Handle chat input (URLs, questions, with file upload support and RAG suggestions)
 if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'Find studies using Nivolumab'), or paste a ClinicalTrials.gov URL..."):
     # Check if it's a URL
     nct_match = re.search(r'NCT\d{8}', prompt)
     is_url = nct_match is not None or 'clinicaltrials.gov' in prompt.lower()
     
-    if is_url and not st.session_state.messages:
+    if is_url:
         # Handle URL input
         url_input = prompt
         nct_number = nct_match.group(0) if nct_match else "Unknown"
@@ -1730,7 +1641,33 @@ if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'F
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
                     save_message_to_db(st.session_state.current_convo_id, "assistant", error_msg)
             else:
-                no_data_msg = "Please process a document first before asking questions, or try searching for clinical trials (e.g., 'Find studies that use Nivolumab')."
-                st.info(no_data_msg)
-                st.session_state.messages.append({"role": "assistant", "content": no_data_msg})
-                save_message_to_db(st.session_state.current_convo_id, "assistant", no_data_msg)
+                # Handle greetings and general questions without requiring a document
+                greeting_patterns = ['hi', 'hello', 'hey', 'greetings', 'good morning', 'good afternoon', 
+                                     'good evening', 'what can you do', 'help', 'how does this work',
+                                     'what are you', 'who are you', 'what is tara', 'thanks', 'thank you']
+                prompt_lower = prompt.lower().strip().rstrip('?!.')
+                
+                if any(g in prompt_lower for g in greeting_patterns) or len(prompt_lower) < 10:
+                    greeting_response = """Hello! I'm **TARA** – your Textual Analysis & Regulatory Assistant. Here's what I can do:
+
+**📄 Analyze Clinical Trial Documents**
+Upload a PDF protocol or paste a ClinicalTrials.gov URL (e.g., `NCT03991871`) and I'll extract structured data, show metrics, and generate a summary.
+
+**🔎 Find Similar Studies**
+Ask me to search for clinical trials by drug name or intervention — e.g., *"Find studies using Pembrolizumab"* or *"Show me similar trials to this study."*
+
+**💬 Answer Questions**
+Once a document is loaded, ask me anything about it — eligibility criteria, endpoints, treatment arms, and more.
+
+**How to get started:**
+1. Upload a PDF using the file uploader above, **or**
+2. Paste a ClinicalTrials.gov URL in this chat, **or**
+3. Search for studies by drug name right here."""
+                    st.markdown(greeting_response)
+                    st.session_state.messages.append({"role": "assistant", "content": greeting_response})
+                    save_message_to_db(st.session_state.current_convo_id, "assistant", greeting_response)
+                else:
+                    no_data_msg = "I don't have a document loaded yet. You can:\n\n1. **Upload a PDF** using the file uploader above\n2. **Paste a ClinicalTrials.gov URL** (e.g., `https://clinicaltrials.gov/study/NCT03991871`)\n3. **Search for studies** — try *\"Find studies using Nivolumab\"*"
+                    st.markdown(no_data_msg)
+                    st.session_state.messages.append({"role": "assistant", "content": no_data_msg})
+                    save_message_to_db(st.session_state.current_convo_id, "assistant", no_data_msg)

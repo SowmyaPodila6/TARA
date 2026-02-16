@@ -519,7 +519,6 @@ Return JSON with "content" (string with extracted info) and "page_references" (a
                     
                     logger.info(f"✅ Successfully extracted {field_name} ({len(extracted_content)} chars, pages: {result['page_references']})")
                     return result
-                    return result
                 else:
                     # Fallback to old format
                     return {"content": self._safe_content_to_string(content), "page_references": []}

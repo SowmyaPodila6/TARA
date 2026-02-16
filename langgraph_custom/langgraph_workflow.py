@@ -26,19 +26,19 @@ try:
     MULTI_TURN_AVAILABLE = True
 except ImportError:
     MULTI_TURN_AVAILABLE = False
-    print("WARNING: multi_turn_extractor not available - falling back to single-call extraction")
+    logger.warning("multi_turn_extractor not available - falling back to single-call extraction")
 
 # Import RAG tool for clinical trials search
 try:
     from .rag_tool import create_clinical_trials_rag_tool, ClinicalTrialSearchTool
     RAG_TOOL_AVAILABLE = True
-    print("RAG tool loaded successfully")
+    logger.info("RAG tool loaded successfully")
 except ImportError as e:
     RAG_TOOL_AVAILABLE = False
-    print(f"WARNING: RAG tool not available - clinical trials similarity search disabled: {e}")
+    logger.warning(f"RAG tool not available - clinical trials similarity search disabled: {e}")
 except Exception as e:
     RAG_TOOL_AVAILABLE = False
-    print(f"ERROR: RAG tool failed to load: {e}")
+    logger.error(f"RAG tool failed to load: {e}")
 
 load_dotenv()
 
@@ -46,14 +46,21 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+_api_key_resolved = False
+
 def _resolve_api_key():
     """Resolve OpenAI API key from Streamlit secrets or environment.
-    Streamlit Cloud stores secrets in st.secrets; local dev uses .env / env vars."""
+    Streamlit Cloud stores secrets in st.secrets; local dev uses .env / env vars.
+    Only performs the lookup once; subsequent calls are no-ops."""
+    global _api_key_resolved
+    if _api_key_resolved:
+        return os.environ.get("OPENAI_API_KEY", "")
+    _api_key_resolved = True
     try:
         import streamlit as st
         key = st.secrets.get("OPENAI_API_KEY") or st.secrets.get("openai_api_key")
         if key:
-            os.environ.setdefault("OPENAI_API_KEY", key)
+            os.environ["OPENAI_API_KEY"] = key
             return key
     except Exception:
         pass
@@ -123,9 +130,7 @@ class WorkflowState(TypedDict):
     extraction_progress: dict  # {"current_field": str, "completed": int, "total": int}
     extraction_cost_estimate: dict  # Cost and time estimates
     progress_log: list  # Real-time progress messages for UI display
-    # RAG tool integration
-    use_rag_tool: bool  # Whether to use RAG tool for this query
-    rag_tool_results: str  # Results from RAG tool search
+    full_text: str  # Full document text (cached for re-extraction)
     # RAG tool integration
     use_rag_tool: bool  # Whether to use RAG tool for this query
     rag_tool_results: str  # Results from RAG tool search
@@ -197,9 +202,11 @@ def parse_pdf(state: WorkflowState) -> WorkflowState:
         
         # Handle file path or URL
         if file_path.startswith('http'):
-            # Download PDF temporarily
+            # Download PDF temporarily with safe temp file
             response = requests.get(file_path)
-            temp_path = f"temp_download_{Path(file_path).stem}.pdf"
+            import tempfile
+            tmp_fd, temp_path = tempfile.mkstemp(suffix='.pdf', prefix='tara_download_')
+            os.close(tmp_fd)
             with open(temp_path, 'wb') as f:
                 f.write(response.content)
             file_path = temp_path
@@ -749,217 +756,44 @@ def extract_from_url(state: WorkflowState) -> WorkflowState:
         state["error"] = f"An error occurred while fetching the protocol: {e}"
     
     return state
-    """Node: Extract data from ClinicalTrials.gov URL (EXACT copy of app_v1 get_protocol_data)"""
-    try:
-        # Extract NCT number
-        nct_match = re.search(r"NCT\d{8}", state["input_url"])
-        if not nct_match:
-            state["error"] = "Invalid ClinicalTrials.gov URL - NCT number not found"
-            return state
-        
-        nct_number = nct_match.group(0)
-        state["nct_id"] = nct_number
-        
-        # Fetch from API (same as app_v1)
-        api_url = f"https://clinicaltrials.gov/api/v2/studies/{nct_number}"
-        response = requests.get(api_url)
-        response.raise_for_status()
-        
-        study_data = response.json()
-        state["raw_data"] = study_data
-        
-        protocol_section = study_data.get('protocolSection', {})
-        results_section = study_data.get('resultsSection', {})
-        
-        if not protocol_section:
-            state["error"] = "Error: Study data could not be found for this NCT number."
-            return state
-
-        # Extract all data EXACTLY as in app_v1.py
-        # (This is a condensed version - the full extraction logic from app_v1)
-        identification_module = protocol_section.get('identificationModule', {})
-        official_title = identification_module.get('officialTitle', 'N/A')
-        
-        status_module = protocol_section.get('statusModule', {})
-        overall_status = status_module.get('overallStatus', 'N/A')
-        
-        description_module = protocol_section.get('descriptionModule', {})
-        brief_summary = description_module.get('briefSummary', 'N/A')
-        
-        design_module = protocol_section.get('designModule', {})
-        study_type = design_module.get('studyType', 'N/A')
-        study_phases = design_module.get('phases', [])
-        study_phase = ", ".join(study_phases) if study_phases else 'N/A'
-        
-        arms_interventions_module = protocol_section.get('armsInterventionsModule', {})
-        arm_groups_list = arms_interventions_module.get('armGroups', [])
-        interventions_list = arms_interventions_module.get('interventions', [])
-        
-        # Format arms
-        arm_groups_text = ""
-        for i, ag in enumerate(arm_groups_list, 1):
-            arm_label = ag.get('label', f'Arm {i}')
-            arm_type = ag.get('type', 'N/A')
-            arm_description = ag.get('description', 'N/A')
-            intervention_names = ag.get('interventionNames', [])
-            intervention_names_str = ", ".join(intervention_names) if intervention_names else "N/A"
-            arm_groups_text += f"**Arm {i}: {arm_label}**\n  Type: {arm_type}\n  Description: {arm_description}\n  Interventions: {intervention_names_str}\n\n"
-        
-        # Format interventions
-        interventions_text = ""
-        for i, intervention in enumerate(interventions_list, 1):
-            name = intervention.get('name', 'N/A')
-            int_type = intervention.get('type', 'N/A')
-            description = intervention.get('description', 'N/A')
-            interventions_text += f"**Drug {i}: {name}**\n  Type: {int_type}\n  Description: {description}\n\n"
-        
-        eligibility_module = protocol_section.get('eligibilityModule', {})
-        eligibility_criteria = eligibility_module.get('eligibilityCriteria', 'N/A')
-        
-        outcomes_module = protocol_section.get('outcomesModule', {})
-        primary_outcomes = outcomes_module.get('primaryOutcomes', [])
-        secondary_outcomes = outcomes_module.get('secondaryOutcomes', [])
-        
-        outcomes_text = "**Primary Objectives:**\n"
-        for outcome in primary_outcomes[:5]:
-            measure = outcome.get('measure', 'N/A')
-            outcomes_text += f"- {measure}\n"
-        
-        if secondary_outcomes:
-            outcomes_text += "\n**Secondary Objectives:**\n"
-            for outcome in secondary_outcomes[:5]:
-                measure = outcome.get('measure', 'N/A')
-                outcomes_text += f"- {measure}\n"
-        
-        # Participant flow
-        participant_flow_text = ""
-        if results_section:
-            participant_flow_module = results_section.get('participantFlowModule', {})
-            groups = participant_flow_module.get('groups', [])
-            if groups:
-                participant_flow_text += "**Participant Enrollment:**\n"
-                for group in groups:
-                    group_title = group.get('title', 'N/A')
-                    group_description = group.get('description', 'N/A')
-                    participant_flow_text += f"- {group_title}: {group_description}\n"
-        
-        # Adverse events
-        adverse_events_text = ""
-        adverse_events_module = results_section.get('adverseEventsModule', {})
-        serious_events = adverse_events_module.get('seriousEvents', [])
-        other_events = adverse_events_module.get('otherEvents', [])
-        
-        if serious_events or other_events:
-            adverse_events_text += "**Adverse Events Reported:**\n"
-            if serious_events:
-                adverse_events_text += f"- Serious events: {len(serious_events)}\n"
-            if other_events:
-                adverse_events_text += f"- Other events: {len(other_events)}\n"
-        else:
-            adverse_events_text = "No adverse events reported in the structured API data."
-        
-        # Locations
-        contacts_locations_module = protocol_section.get('contactsLocationsModule', {})
-        locations = contacts_locations_module.get('locations', [])
-        location_text = ""
-        if locations:
-            location_text = f"{len(locations)} sites across multiple countries"
-        
-        # Sponsor
-        sponsor_collaborators_module = protocol_section.get('sponsorCollaboratorsModule', {})
-        lead_sponsor = sponsor_collaborators_module.get('leadSponsor', {})
-        sponsor_name = lead_sponsor.get('name', 'N/A')
-        sponsor_class = lead_sponsor.get('class', 'N/A')
-        sponsor_info = f"Lead Sponsor: {sponsor_name} ({sponsor_class})"
-        
-        # Create data_to_summarize dict (same format as app_v1 - for display)
-        data_to_summarize = {
-            "Study Overview": f"{official_title} | Status: {overall_status} | Type: {study_type} - {study_phase}",
-            "Brief Description": brief_summary,
-            "Primary and Secondary Objectives": outcomes_text if outcomes_text else None,
-            "Treatment Arms and Interventions": f"{arm_groups_text}\n\n{interventions_text}" if (arm_groups_text or interventions_text) else None,
-            "Eligibility Criteria": eligibility_criteria,
-            "Enrollment and Participant Flow": participant_flow_text if participant_flow_text else None,
-            "Adverse Events Profile": adverse_events_text if adverse_events_text and "No adverse events reported" not in adverse_events_text else None,
-            "Study Locations": location_text if location_text else None,
-            "Sponsor Information": sponsor_info if sponsor_info and sponsor_name != "N/A" else None
-        }
-        
-        # Create parsed_json with proper field names (lowercase with underscores)
-        # Preserve None values to accurately calculate metrics
-        parsed_json = {
-            "study_overview": data_to_summarize.get("Study Overview"),
-            "brief_description": data_to_summarize.get("Brief Description"),
-            "primary_secondary_objectives": data_to_summarize.get("Primary and Secondary Objectives"),
-            "treatment_arms_interventions": data_to_summarize.get("Treatment Arms and Interventions"),
-            "eligibility_criteria": data_to_summarize.get("Eligibility Criteria"),
-            "enrollment_participant_flow": data_to_summarize.get("Enrollment and Participant Flow"),
-            "adverse_events_profile": data_to_summarize.get("Adverse Events Profile"),
-            "study_locations": data_to_summarize.get("Study Locations"),
-            "sponsor_information": data_to_summarize.get("Sponsor Information")
-        }
-        
-        state["data_to_summarize"] = data_to_summarize
-        state["parsed_json"] = parsed_json  # Use proper field names for metrics
-        
-        # Calculate metrics based on parsed_json
-        state["confidence_score"], state["completeness_score"], state["missing_fields"] = calculate_metrics(parsed_json)
-        
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            state["error"] = f"Error: Study with NCT number was not found on ClinicalTrials.gov."
-        else:
-            state["error"] = f"HTTP error occurred while fetching the protocol: {e}"
-    except Exception as e:
-        state["error"] = f"An error occurred while fetching the protocol: {e}"
-    
-    return state
 
 
 def should_use_rag_tool(query: str) -> bool:
-    """Use LLM to determine if a query should use the RAG tool for clinical trials search"""
+    """Determine if a query should use the RAG tool for clinical trials search.
+    Uses fast keyword/pattern matching instead of an LLM call (saves ~1-2s per message)."""
     if not query or not RAG_TOOL_AVAILABLE:
         return False
-    
+
     # Ensure query is a string
-    if isinstance(query, dict):
+    if not isinstance(query, str):
         query = str(query)
-    elif not isinstance(query, str):
-        query = str(query)
-    
-    # Use LLM to determine if this query needs RAG search
-    try:
-        detection_prompt = f"""You are an AI assistant that determines if a user query requires searching a clinical trials database.
 
-User query: "{query}"
+    query_lower = query.lower().strip()
 
-Analyze this query and determine if it:
-1. Asks for similar studies, trials, or research
-2. Requests information about other treatments, drugs, or interventions
-3. Seeks comparative information about clinical trials
-4. Asks about alternative therapies or medications
-5. Requests finding or searching for clinical trials
+    # Skip trivial / greeting-like messages
+    if len(query_lower) < 8 or query_lower in (
+        "hi", "hello", "hey", "thanks", "thank you", "ok", "okay",
+        "generate_summary", "yes", "no", "bye",
+    ):
+        return False
 
-Respond with only "YES" if the query requires database search, or "NO" if it doesn't.
+    # Strong positive signals (any single keyword is enough)
+    strong_keywords = [
+        'similar stud', 'similar trial', 'find stud', 'find trial',
+        'search for', 'fetch', 'compare', 'other trial', 'other stud',
+        'related stud', 'related trial', 'look up', 'database',
+    ]
+    if any(kw in query_lower for kw in strong_keywords):
+        return True
 
-Examples:
-- "Can you fetch similar studies using DTG + TAF + FTC?" → YES
-- "What other trials use pembrolizumab?" → YES
-- "Find studies with similar drugs" → YES
-- "What is the primary endpoint of this study?" → NO
-- "Generate summary" → NO"""
-        
-        detection_response = llm.invoke([HumanMessage(content=detection_prompt)])
-        result = detection_response.content.strip().upper()
-        
-        return result == "YES"
-        
-    except Exception as e:
-        print(f"WARNING: LLM detection error: {e}")
-        # Fallback to simple keyword detection
-        query_lower = query.lower()
-        simple_keywords = ['similar', 'other', 'find', 'search', 'fetch', 'show', 'list', 'compare']
-        return any(keyword in query_lower for keyword in simple_keywords)
+    # Medium signals – need 2+ to trigger
+    medium_keywords = [
+        'similar', 'find', 'search', 'other', 'alternative',
+        'studies', 'trials', 'treatments', 'drugs', 'interventions',
+        'show me', 'list', 'what else', 'pembrolizumab', 'nivolumab',
+    ]
+    matches = sum(1 for kw in medium_keywords if kw in query_lower)
+    return matches >= 2
 
 
 def generate_rag_search_query(user_query: str, current_study_data: dict = None) -> str:
@@ -1113,92 +947,6 @@ def check_quality(state: WorkflowState) -> Literal["llm_fallback", "chat_node"]:
         return "chat_node"
 
 
-def llm_fallback_old(state: WorkflowState) -> WorkflowState:
-    """Node: Use LLM to extract missing fields from full document with chunking (OLD VERSION - KEPT FOR REFERENCE)"""
-    try:
-        # Mark that LLM fallback is being used
-        state["used_llm_fallback"] = True
-        
-        # Get full document text
-        if state["input_type"] == "pdf":
-            parser = EnhancedClinicalTrialParser()
-            
-            file_path = state["input_url"]
-            # Handle URLs
-            if file_path.startswith('http'):
-                response = requests.get(file_path)
-                temp_path = f"temp_llm_fallback.pdf"
-                with open(temp_path, 'wb') as f:
-                    f.write(response.content)
-                file_path = temp_path
-            
-            # Extract full text using enhanced parser
-            full_text, metadata = parser.extract_text_multimethod(file_path)
-            
-            # Clean up temp file
-            if state["input_url"].startswith('http'):
-                import os
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-        else:
-            full_text = json.dumps(state["raw_data"], indent=2)
-        
-        # LLM extraction prompt
-        system_prompt = """You are a clinical trial data extraction expert. 
-Extract the following fields from the document chunk provided. 
-Preserve original content exactly with references, do not modify or summarize.
-
-Required fields:
-1. study_overview
-2. brief_description
-3. primary_secondary_objectives
-4. treatment_arms_interventions
-5. eligibility_criteria
-6. enrollment_participant_flow
-7. adverse_events_profile
-8. study_locations
-9. sponsor_information
-
-Return as JSON. If a field is not found in this chunk, return null for that field."""
-
-        # Chunk the document into 30k character chunks
-        chunk_size = 30000
-        chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
-        
-        # Process each chunk and merge results
-        all_extracted = {}
-        for i, chunk in enumerate(chunks):
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=f"Document chunk {i+1}/{len(chunks)}:\n\n{chunk}")
-            ]
-            
-            response = llm.invoke(messages)
-            
-            # Parse LLM response
-            try:
-                chunk_extracted = json.loads(response.content)
-                # Merge non-null fields
-                for field, value in chunk_extracted.items():
-                    if value and value != "null" and (field not in all_extracted or not all_extracted.get(field)):
-                        all_extracted[field] = value
-            except json.JSONDecodeError:
-                continue
-        
-        # Merge with existing data (only update missing or empty fields)
-        for field, value in all_extracted.items():
-            if value and (field not in state["parsed_json"] or not state["parsed_json"].get(field)):
-                state["parsed_json"][field] = value
-        
-        # Recalculate metrics
-        state["confidence_score"], state["completeness_score"], state["missing_fields"] = calculate_metrics(state["parsed_json"])
-        
-    except Exception as e:
-        state["error"] = f"LLM fallback error: {str(e)}"
-    
-    return state
-
-
 def llm_fallback(state: WorkflowState) -> WorkflowState:
     """Node: Use multi-turn LLM extraction to handle large PDFs without rate limiting"""
     
@@ -1227,7 +975,9 @@ def llm_fallback(state: WorkflowState) -> WorkflowState:
             # Handle URLs
             if file_path.startswith('http'):
                 response = requests.get(file_path)
-                temp_path = f"temp_llm_fallback.pdf"
+                import tempfile
+                tmp_fd, temp_path = tempfile.mkstemp(suffix='.pdf', prefix='tara_fallback_')
+                os.close(tmp_fd)
                 with open(temp_path, 'wb') as f:
                     f.write(response.content)
                 file_path = temp_path
@@ -1237,7 +987,6 @@ def llm_fallback(state: WorkflowState) -> WorkflowState:
             
             # Clean up temp file
             if state["input_url"].startswith('http'):
-                import os
                 if os.path.exists(file_path):
                     os.remove(file_path)
         else:
@@ -1843,24 +1592,27 @@ Please provide a comprehensive answer that addresses the user's question about s
             # Generate initial summary
             data_to_summarize = state["data_to_summarize"]
             
-            # Filter sections
+            # Filter sections - handle both dict and string content formats
             sections_to_include = {}
-            for section, content in data_to_summarize.items():
+            for section, raw_content in data_to_summarize.items():
+                # Extract content from dict format or use string directly
+                if isinstance(raw_content, dict):
+                    content = raw_content.get("content", "")
+                else:
+                    content = raw_content
+                
+                # Ensure content is a string
+                if not isinstance(content, str):
+                    content = str(content) if content else ""
+                
                 if (content and 
                     content != "N/A" and 
-                    isinstance(content, str) and
-                    "No " not in content[:20] and
-                    "not available" not in content.lower() and
+                    content.strip() != "" and
                     len(content.strip()) > 30):
                     sections_to_include[section] = content
             
             consolidated_content = ""
             for section, content in sections_to_include.items():
-                # Ensure content is a string before adding to consolidated content
-                if isinstance(content, dict):
-                    content = content.get('content', str(content))
-                if not isinstance(content, str):
-                    content = str(content) if content else ""
                 consolidated_content += f"\n\n**{section}:**\n{content}\n"
             
             # Handle both dict and string formats for study title
@@ -1936,39 +1688,6 @@ Please provide a comprehensive answer that addresses the user's question about s
                 
     except Exception as e:
         yield f"Error: {str(e)}"
-
-
-def convert_api_to_schema(study_data: dict) -> dict:
-    """Convert ClinicalTrials.gov API data to standard schema (deprecated - using extract_from_url instead)"""
-    # This function is kept for backward compatibility but not used in main workflow
-    protocol = study_data.get('protocolSection', {})
-    
-    identification = protocol.get('identificationModule', {})
-    description = protocol.get('descriptionModule', {})
-    design = protocol.get('designModule', {})
-    arms = protocol.get('armsInterventionsModule', {})
-    eligibility = protocol.get('eligibilityModule', {})
-    contacts = protocol.get('contactsLocationsModule', {})
-    sponsor = protocol.get('sponsorCollaboratorsModule', {})
-    outcomes = protocol.get('outcomesModule', {})
-    
-    return {
-        "study_overview": identification.get('officialTitle', ''),
-        "brief_description": description.get('briefSummary', ''),
-        "primary_secondary_objectives": json.dumps({
-            'primary': outcomes.get('primaryOutcomes', []),
-            'secondary': outcomes.get('secondaryOutcomes', [])
-        }),
-        "treatment_arms_interventions": json.dumps({
-            'arms': arms.get('armGroups', []),
-            'interventions': arms.get('interventions', [])
-        }),
-        "eligibility_criteria": eligibility.get('eligibilityCriteria', ''),
-        "enrollment_participant_flow": json.dumps(design.get('enrollmentInfo', {})),
-        "adverse_events_profile": "Not available in protocol section",
-        "study_locations": json.dumps(contacts.get('locations', [])),
-        "sponsor_information": json.dumps(sponsor)
-    }
 
 
 # Build the graph
