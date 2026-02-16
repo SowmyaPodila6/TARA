@@ -1272,25 +1272,40 @@ if conversations:
 
 # Welcome message if no messages
 if not st.session_state.messages:
-    with st.chat_message("assistant"):
-        st.markdown("""👋 Welcome to **TARA** – Your AI-powered Textual Analysis & Regulatory Assistant!
-
-📄 **Upload Protocols**
-Start with a clinical trial PDF or a ClinicalTrials.gov URL.
-
-🔍 **Automated Data Extraction**
-Key fields—study overview, objectives, treatments, eligibility, and more—are extracted into structured JSON, and you can review, refine, or approve them.
-
-📊 **Summary Generation**
-Create clear study summaries based on the extracted data.
-
-💬 **Ask Anything**
-Query your study data using natural language for fast insights.
-
-🔎 **Find Related Studies**
-Search for clinical trials that use a specific drug or intervention, or find studies similar to an uploaded study/trial.
-
-Get started by uploading a protocol or entering a ClinicalTrials.gov URL.""")
+    with st.chat_message("assistant", avatar="🔬"):
+        st.markdown("Hey there! 👋 I'm **TARA**, your clinical trials assistant.")
+        st.markdown("Here's how I can help:")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc;">
+    <strong>📄 Upload a Protocol</strong><br>
+    <span style="color: #555; font-size: 0.9em;">Drop a clinical trial PDF or paste a ClinicalTrials.gov URL</span>
+</div>
+""", unsafe_allow_html=True)
+            st.markdown("""
+<div style="background: linear-gradient(135deg, #e8f4fd, #f0f7ff); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #0066cc;">
+    <strong>💬 Ask Me Anything</strong><br>
+    <span style="color: #555; font-size: 0.9em;">Query your study data — eligibility, endpoints, treatment arms & more</span>
+</div>
+""", unsafe_allow_html=True)
+        with col2:
+            st.markdown("""
+<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800;">
+    <strong>🔍 Structured Extraction</strong><br>
+    <span style="color: #555; font-size: 0.9em;">9 key fields auto-extracted into JSON — review, refine & approve</span>
+</div>
+""", unsafe_allow_html=True)
+            st.markdown("""
+<div style="background: linear-gradient(135deg, #fff3e0, #fff8f0); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #ff9800;">
+    <strong>🔎 Find Similar Studies</strong><br>
+    <span style="color: #555; font-size: 0.9em;">Search 100+ trials by drug name — e.g. <em>"Find studies using Pembrolizumab"</em></span>
+</div>
+""", unsafe_allow_html=True)
+        
+        st.markdown("---")
+        st.markdown("⚡ **Try it now** — upload a PDF above, paste a URL below, or just ask me something!")
     st.markdown("")
 
 # Display existing chat messages
