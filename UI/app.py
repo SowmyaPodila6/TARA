@@ -1219,23 +1219,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
         transform: translateY(-1px);
     }
-    /* Hide all browser-native tooltips on buttons */
-    section[data-testid="stSidebar"] .stButton > button {
-        pointer-events: auto;
-    }
-    section[data-testid="stSidebar"] .stButton > button[title] {
-        font-size: 0.9rem; /* re-assert so selector stays valid */
-    }
-    /* Hide default Streamlit tooltips on sidebar buttons */
-    section[data-testid="stSidebar"] .stTooltipIcon,
-    section[data-testid="stSidebar"] [data-testid="stTooltipHoverTarget"] {
-        display: none !important;
-    }
-    /* Hide any p element inside sidebar buttons that shows keyboard text */
-    section[data-testid="stSidebar"] .stButton > button p[data-testid],
-    section[data-testid="stSidebar"] .stButton > button div[data-testid="stMarkdownContainer"] {
-        display: none !important;
-    }
     section[data-testid="stSidebar"] .stSelectbox > div > div {
         border-radius: 8px;
         border: 1px solid #cbd5e1;
