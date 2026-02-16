@@ -1038,6 +1038,21 @@ def _regenerate_summary(state):
         st.code(traceback.format_exc())
 
 
+def _get_pdf_bytes(pdf):
+    """Get PDF bytes - compatible with both fpdf 1.x and fpdf2."""
+    try:
+        result = pdf.output(dest='S')  # fpdf 1.x
+    except TypeError:
+        result = pdf.output()  # fpdf2 (dest param removed)
+    if isinstance(result, (bytearray, memoryview)):
+        return bytes(result)
+    if isinstance(result, bytes) and len(result) > 0:
+        return result
+    if isinstance(result, str) and len(result) > 0:
+        return result.encode('latin1', 'ignore')
+    raise RuntimeError("PDF output returned empty data")
+
+
 def create_summary_pdf(summary_text, nct_id):
     """Create PDF from summary text"""
     try:
@@ -1120,17 +1135,16 @@ def create_summary_pdf(summary_text, nct_id):
             except:
                 continue
 
-        result = pdf.output()
-        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
+        return _get_pdf_bytes(pdf)
         
     except Exception as e:
-        pdf = FPDF()
+        from fpdf import FPDF as _FPDF
+        pdf = _FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         pdf.cell(0, 10, "PDF Generation Error", ln=True)
         pdf.cell(0, 10, f"NCT ID: {nct_id}", ln=True)
-        result = pdf.output()
-        return bytes(result) if isinstance(result, (bytearray, memoryview)) else result if isinstance(result, bytes) else result.encode('latin1', 'ignore')
+        return _get_pdf_bytes(pdf)
 
 # Page configuration
 st.set_page_config(
