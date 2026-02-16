@@ -1179,14 +1179,209 @@ if "ui_state" not in st.session_state:
         "refinement_ui_open": {}
     }
 
-# Reduce top padding
+# ──────────────────────────────────────────────────────────────
+# Global Professional CSS Theme — Healthcare / Clinical Look
+# ──────────────────────────────────────────────────────────────
 st.markdown("""
-    <style>
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 0rem;
-        }
-    </style>
+<style>
+    /* ── Import professional font ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    /* ── Base layout ── */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 0rem;
+        max-width: 1200px;
+    }
+    html, body, [class*="st-"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        border-right: 1px solid #e2e8f0;
+    }
+    section[data-testid="stSidebar"] .stButton > button {
+        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+    }
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
+        transform: translateY(-1px);
+    }
+    section[data-testid="stSidebar"] .stSelectbox > div > div {
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+    }
+
+    /* ── Chat bubbles ── */
+    .stChatMessage {
+        border-radius: 14px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        border: 1px solid #f0f0f0;
+    }
+    /* User bubble */
+    .stChatMessage[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+        border: 1px solid #bfdbfe;
+    }
+    /* Assistant bubble */
+    .stChatMessage[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+        background: #ffffff !important;
+        border: 1px solid #e8ecf1;
+    }
+
+    /* ── Chat input ── */
+    .stChatInput > div {
+        border-radius: 12px !important;
+        border: 2px solid #e2e8f0 !important;
+        transition: border-color 0.2s ease;
+    }
+    .stChatInput > div:focus-within {
+        border-color: #0066cc !important;
+        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1) !important;
+    }
+    .stChatInput textarea {
+        font-size: 0.95rem !important;
+    }
+
+    /* ── File uploader ── */
+    [data-testid="stFileUploader"] {
+        border-radius: 12px;
+    }
+    [data-testid="stFileUploader"] section {
+        border-radius: 12px;
+        border: 2px dashed #cbd5e1;
+        transition: border-color 0.2s ease;
+    }
+    [data-testid="stFileUploader"] section:hover {
+        border-color: #0066cc;
+    }
+
+    /* ── Buttons (main area) ── */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        font-size: 0.88rem;
+    }
+    .stButton > button:hover {
+        transform: translateY(-1px);
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+    }
+
+    /* ── Download buttons ── */
+    .stDownloadButton > button {
+        border-radius: 8px;
+        font-weight: 500;
+        border: 1px solid #0066cc;
+        color: #0066cc;
+        background: white;
+    }
+    .stDownloadButton > button:hover {
+        background: #eff6ff;
+    }
+
+    /* ── Tabs ── */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+        padding: 8px 16px;
+    }
+
+    /* ── Expanders ── */
+    .streamlit-expanderHeader {
+        font-weight: 500;
+        font-size: 0.95rem;
+        border-radius: 8px;
+    }
+
+    /* ── Metrics ── */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #f8fafc, #ffffff);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    [data-testid="stMetricLabel"] {
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ── Suggestion chips (below chat) ── */
+    .chip-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 0 4px 0;
+    }
+    .chip-container .stButton > button {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #475569;
+        box-shadow: none;
+    }
+    .chip-container .stButton > button:hover {
+        background: #eff6ff;
+        border-color: #0066cc;
+        color: #0066cc;
+    }
+
+    /* ── Divider ── */
+    hr {
+        border: none;
+        border-top: 1px solid #e8ecf1;
+        margin: 0.8rem 0;
+    }
+
+    /* ── Alerts ── */
+    .stAlert {
+        border-radius: 10px;
+    }
+
+    /* ── Footer ── */
+    .tara-footer {
+        text-align: center;
+        padding: 16px 0 8px 0;
+        color: #94a3b8;
+        font-size: 0.78rem;
+        letter-spacing: 0.03em;
+    }
+    .tara-footer a {
+        color: #64748b;
+        text-decoration: none;
+    }
+</style>
 """, unsafe_allow_html=True)
 
 # Clean header with logo
@@ -1224,6 +1419,14 @@ if st.session_state.get("new_chat_requested"):
     st.rerun()
 
 # Sidebar
+st.sidebar.markdown("""
+<div style="text-align: center; padding: 8px 0 12px 0; margin-bottom: 4px;">
+    <span style="font-size: 1.6em; font-weight: 700; letter-spacing: -0.5px;">
+        <span style="color: #0066cc;">T</span><span style="color: #1E293B;">AR</span><span style="color: #0066cc;">A</span>
+    </span>
+    <p style="color: #94a3b8; font-size: 0.72em; margin: 2px 0 0 0; font-weight: 500; letter-spacing: 0.04em;">CLINICAL TRIALS ASSISTANT</p>
+</div>
+""", unsafe_allow_html=True)
 st.sidebar.button("➕ Start New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
 
 st.sidebar.divider()
@@ -1488,7 +1691,32 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
     st.session_state["_last_uploaded_file_name"] = uploaded_file.name
 
 # Handle chat input (URLs, questions, with file upload support and RAG suggestions)
-if prompt := st.chat_input("Ask a question, search for clinical trials (e.g., 'Find studies using Nivolumab'), or paste a ClinicalTrials.gov URL..."):
+
+# ── Suggestion chips (only shown when no active conversation) ──
+if not st.session_state.messages:
+    st.markdown('<div class="chip-container">', unsafe_allow_html=True)
+    chip_cols = st.columns(4)
+    chip_suggestions = [
+        ("🔎 Find Pembrolizumab studies", "Find studies using Pembrolizumab"),
+        ("📋 Analyze NCT03991871", "https://clinicaltrials.gov/study/NCT03991871"),
+        ("💊 Search Nivolumab trials", "Find clinical trials using Nivolumab"),
+        ("❓ What can you do?", "What can you do?"),
+    ]
+    for i, (label, value) in enumerate(chip_suggestions):
+        with chip_cols[i]:
+            if st.button(label, key=f"chip_{i}", use_container_width=True):
+                st.session_state["_chip_prompt"] = value
+                st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Check if a chip was clicked
+_chip_prompt = st.session_state.pop("_chip_prompt", None)
+if _chip_prompt:
+    prompt = _chip_prompt
+else:
+    prompt = st.chat_input("Ask a question, search for clinical trials, or paste a ClinicalTrials.gov URL...")
+
+if prompt:
     # Check if it's a URL
     nct_match = re.search(r'NCT\d{8}', prompt)
     is_url = nct_match is not None or 'clinicaltrials.gov' in prompt.lower()
@@ -1717,3 +1945,10 @@ Once a document is loaded, ask me anything about it — eligibility criteria, en
                     st.markdown(no_data_msg)
                     st.session_state.messages.append({"role": "assistant", "content": no_data_msg})
                     save_message_to_db(st.session_state.current_convo_id, "assistant", no_data_msg)
+
+# ── Professional footer ──
+st.markdown("""
+<div class="tara-footer">
+    <span>TARA</span> &middot; Textual Analysis & Regulatory Assistant &middot; Built for Clinical Research Teams
+</div>
+""", unsafe_allow_html=True)
