@@ -1219,6 +1219,17 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
         transform: translateY(-1px);
     }
+    section[data-testid="stSidebar"] .stButton > button::after {
+        content: none !important;
+    }
+    section[data-testid="stSidebar"] .stButton > button[title] {
+        title: none;
+    }
+    /* Hide default Streamlit tooltips on sidebar buttons */
+    section[data-testid="stSidebar"] .stTooltipIcon,
+    section[data-testid="stSidebar"] [data-testid="stTooltipHoverTarget"] {
+        display: none !important;
+    }
     section[data-testid="stSidebar"] .stSelectbox > div > div {
         border-radius: 8px;
         border: 1px solid #cbd5e1;
@@ -1334,29 +1345,6 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* ── Suggestion chips (below chat) ── */
-    .chip-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 8px 0 4px 0;
-    }
-    .chip-container .stButton > button {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 20px;
-        padding: 6px 16px;
-        font-size: 0.82rem;
-        font-weight: 500;
-        color: #475569;
-        box-shadow: none;
-    }
-    .chip-container .stButton > button:hover {
-        background: #eff6ff;
-        border-color: #0066cc;
-        color: #0066cc;
-    }
-
     /* ── Divider ── */
     hr {
         border: none;
@@ -1424,7 +1412,7 @@ st.sidebar.markdown("""
     <span style="font-size: 1.6em; font-weight: 700; letter-spacing: -0.5px;">
         <span style="color: #0066cc;">T</span><span style="color: #1E293B;">AR</span><span style="color: #0066cc;">A</span>
     </span>
-    <p style="color: #94a3b8; font-size: 0.72em; margin: 2px 0 0 0; font-weight: 500; letter-spacing: 0.04em;">CLINICAL TRIALS ASSISTANT</p>
+    <p style="color: #94a3b8; font-size: 0.72em; margin: 2px 0 0 0; font-weight: 500; letter-spacing: 0.04em;">TEXTUAL ANALYSIS & REGULATORY ASSISTANT</p>
 </div>
 """, unsafe_allow_html=True)
 st.sidebar.button("➕ Start New Chat", key="new_chat_button", on_click=new_chat_click, use_container_width=True)
@@ -1691,32 +1679,7 @@ if uploaded_file is not None and not st.session_state.get("_last_uploaded_file_n
     st.session_state["_last_uploaded_file_name"] = uploaded_file.name
 
 # Handle chat input (URLs, questions, with file upload support and RAG suggestions)
-
-# ── Suggestion chips (only shown when no active conversation) ──
-if not st.session_state.messages:
-    st.markdown('<div class="chip-container">', unsafe_allow_html=True)
-    chip_cols = st.columns(4)
-    chip_suggestions = [
-        ("🔎 Find Pembrolizumab studies", "Find studies using Pembrolizumab"),
-        ("📋 Analyze NCT03991871", "https://clinicaltrials.gov/study/NCT03991871"),
-        ("💊 Search Nivolumab trials", "Find clinical trials using Nivolumab"),
-        ("❓ What can you do?", "What can you do?"),
-    ]
-    for i, (label, value) in enumerate(chip_suggestions):
-        with chip_cols[i]:
-            if st.button(label, key=f"chip_{i}", use_container_width=True):
-                st.session_state["_chip_prompt"] = value
-                st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# Check if a chip was clicked
-_chip_prompt = st.session_state.pop("_chip_prompt", None)
-if _chip_prompt:
-    prompt = _chip_prompt
-else:
-    prompt = st.chat_input("Ask a question, search for clinical trials, or paste a ClinicalTrials.gov URL...")
-
-if prompt:
+if prompt := st.chat_input("Ask a question, search for clinical trials, or paste a ClinicalTrials.gov URL..."):
     # Check if it's a URL
     nct_match = re.search(r'NCT\d{8}', prompt)
     is_url = nct_match is not None or 'clinicaltrials.gov' in prompt.lower()
