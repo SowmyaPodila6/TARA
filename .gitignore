@@ -24,6 +24,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+db/clinical_trials_vectordb/
 
 # Temporary files
 *.tmp
