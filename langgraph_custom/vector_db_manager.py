@@ -35,32 +35,8 @@ class ClinicalTrialsVectorDB:
         # Ensure database directory exists
         self.db_path.mkdir(parents=True, exist_ok=True)
         
-        # Initialize ChromaDB client with proper settings to avoid threading issues
-        try:
-            self.client = chromadb.PersistentClient(
-                path=str(self.db_path),
-                settings=Settings(
-                    anonymized_telemetry=False,
-                )
-            )
-        except TypeError:
-            # Older ChromaDB versions may need different settings kwargs
-            try:
-                self.client = chromadb.PersistentClient(
-                    path=str(self.db_path),
-                    settings=Settings(
-                        allow_reset=True,
-                        anonymized_telemetry=False,
-                        is_persistent=True
-                    )
-                )
-            except Exception as e2:
-                logger.warning(f"Failed to create persistent client: {e2}")
-                self.client = chromadb.Client()
-        except Exception as e:
-            logger.warning(f"Failed to create persistent client: {e}")
-            # Fallback to in-memory client
-            self.client = chromadb.Client()
+        # Initialize ChromaDB client - handle both old (0.4.x) and new (0.5.x/0.6.x) APIs
+        self.client = self._create_client()
         
         # Initialize embedding function
         try:
@@ -72,15 +48,88 @@ class ClinicalTrialsVectorDB:
             # Fallback to default embedding
             self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
         
-        # Get or create collection
+        # Get or create collection - handle DB version mismatches gracefully
+        self.collection = self._init_collection(collection_name)
+    
+    def _create_client(self):
+        """Create ChromaDB client, handling API differences across versions."""
+        # Try new-style Settings first (ChromaDB 0.5.x / 0.6.x)
         try:
-            self.collection = self.client.get_or_create_collection(
+            return chromadb.PersistentClient(
+                path=str(self.db_path),
+                settings=Settings(
+                    anonymized_telemetry=False,
+                )
+            )
+        except (TypeError, ValueError):
+            pass
+        
+        # Fallback: old-style Settings (ChromaDB 0.4.x)
+        try:
+            return chromadb.PersistentClient(
+                path=str(self.db_path),
+                settings=Settings(
+                    allow_reset=True,
+                    anonymized_telemetry=False,
+                    is_persistent=True
+                )
+            )
+        except Exception as e:
+            logger.warning(f"PersistentClient failed, using in-memory: {e}")
+            return chromadb.Client()
+    
+    def _init_collection(self, collection_name: str):
+        """Initialize collection, handling version-mismatch '_type' errors."""
+        # 1. Try get_or_create_collection (works on most versions)
+        try:
+            coll = self.client.get_or_create_collection(
                 name=collection_name,
                 embedding_function=self.embedding_function,
             )
-            logger.info(f"Loaded collection '{collection_name}' ({self.collection.count()} docs)")
-        except Exception as e:
-            logger.error(f"Failed to get/create collection: {e}")
+            logger.info(f"Loaded collection '{collection_name}' ({coll.count()} docs)")
+            return coll
+        except Exception as e1:
+            logger.warning(f"get_or_create_collection failed: {e1}")
+        
+        # 2. Try get_collection then create_collection separately
+        try:
+            coll = self.client.get_collection(
+                name=collection_name,
+                embedding_function=self.embedding_function
+            )
+            logger.info(f"Loaded existing collection '{collection_name}'")
+            return coll
+        except Exception:
+            pass
+        
+        try:
+            coll = self.client.create_collection(
+                name=collection_name,
+                embedding_function=self.embedding_function,
+                metadata={"description": "Cancer clinical trials for RAG"}
+            )
+            logger.info(f"Created new collection '{collection_name}'")
+            return coll
+        except Exception as e2:
+            logger.warning(f"Create collection failed: {e2}")
+        
+        # 3. Nuclear option: DB is corrupt/incompatible - wipe and recreate
+        logger.warning("DB appears incompatible - deleting and recreating")
+        try:
+            import shutil
+            db_str = str(self.db_path)
+            shutil.rmtree(db_str, ignore_errors=True)
+            self.db_path.mkdir(parents=True, exist_ok=True)
+            self.client = self._create_client()
+            coll = self.client.create_collection(
+                name=collection_name,
+                embedding_function=self.embedding_function,
+                metadata={"description": "Cancer clinical trials for RAG"}
+            )
+            logger.info(f"Recreated fresh collection '{collection_name}'")
+            return coll
+        except Exception as e3:
+            logger.error(f"All collection init attempts failed: {e3}")
             raise
     
     def _create_document_text(self, study_data: Dict[str, Any]) -> str:
