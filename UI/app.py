@@ -1199,6 +1199,11 @@ st.markdown("""
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
         border-right: 1px solid #e2e8f0;
     }
+    /* Hide the sidebar collapse button that renders as raw text */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
     section[data-testid="stSidebar"] .stButton > button {
         background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
         color: white;
