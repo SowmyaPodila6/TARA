@@ -65,6 +65,16 @@ class ClinicalTrialsVectorDB:
     
     def _create_client(self):
         """Create ChromaDB client, handling API differences across versions."""
+        
+        # NUCLEAR OPTION FIRST: Try ephemeral in-memory (works everywhere, rebuilds on restart)
+        # This ensures RAG always works even if persistence is broken
+        try:
+            client = chromadb.Client()
+            logger.info("Created ephemeral in-memory ChromaDB client (will rebuild from seed data on restart)")
+            return client
+        except Exception as e_ephemeral:
+            logger.error(f"Even ephemeral Client() failed: {e_ephemeral}")
+        
         # Try 1: PersistentClient with minimal settings (ChromaDB 0.5+/0.6+)
         try:
             client = chromadb.PersistentClient(
@@ -112,16 +122,10 @@ class ClinicalTrialsVectorDB:
             return client
         except Exception as e4:
             logger.debug(f"Legacy Client with persist_directory failed: {e4}")
-        
-        # Fallback: Ephemeral in-memory client (data lost on restart)
-        try:
-            logger.warning("All persistent attempts failed — using ephemeral in-memory client (data will not persist)")
-            client = chromadb.Client()
-            return client
-        except Exception as e5:
-            logger.error(f"Even ephemeral Client() failed: {e5}")
-            # Last resort: return None and let caller handle it
-            return None
+
+        # Last resort: return None
+        logger.error("All ChromaDB client creation attempts failed")
+        return None
     
     def _init_collection(self, collection_name: str):
         """Initialize collection, handling version-mismatch '_type' errors."""
