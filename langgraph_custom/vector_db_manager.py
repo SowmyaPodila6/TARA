@@ -50,6 +50,9 @@ class ClinicalTrialsVectorDB:
         
         # Get or create collection - handle DB version mismatches gracefully
         self.collection = self._init_collection(collection_name)
+        
+        # Auto-populate if collection is empty and seed data file exists
+        self._auto_populate_if_empty()
     
     def _create_client(self):
         """Create ChromaDB client, handling API differences across versions."""
@@ -131,6 +134,29 @@ class ClinicalTrialsVectorDB:
         except Exception as e3:
             logger.error(f"All collection init attempts failed: {e3}")
             raise
+    
+    def _auto_populate_if_empty(self):
+        """Load seed data from JSON file if vector DB collection is empty."""
+        try:
+            if self.collection.count() > 0:
+                return  # Already has data
+            
+            # Look for seed data file in common locations
+            seed_paths = [
+                Path("data/cancer_clinical_trials.json"),
+                Path(__file__).parent.parent / "data" / "cancer_clinical_trials.json",
+            ]
+            
+            for seed_path in seed_paths:
+                if seed_path.exists():
+                    logger.info(f"Collection empty — auto-loading seed data from {seed_path}")
+                    count = self.load_from_json(str(seed_path))
+                    logger.info(f"Auto-populated {count} studies into vector DB")
+                    return
+            
+            logger.info("Collection empty and no seed data file found at data/cancer_clinical_trials.json")
+        except Exception as e:
+            logger.warning(f"Auto-populate failed (non-fatal): {e}")
     
     def _create_document_text(self, study_data: Dict[str, Any]) -> str:
         """

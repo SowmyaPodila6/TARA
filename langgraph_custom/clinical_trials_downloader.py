@@ -48,7 +48,6 @@ class ClinicalTrialsDownloader:
         """
         
         if conditions is None:
-            # Default to major cancer types
             conditions = [
                 "lung cancer", "breast cancer", "colorectal cancer", "prostate cancer",
                 "melanoma", "lymphoma", "leukemia", "pancreatic cancer", "ovarian cancer",
@@ -62,83 +61,104 @@ class ClinicalTrialsDownloader:
         if study_types is None:
             study_types = ["INTERVENTIONAL"]
         
-        nct_ids = []
+        nct_ids = set()
         
-        # Search for each condition
-        for condition in conditions:
+        # Build search queries — combine conditions with interventions if provided
+        search_terms = []
+        if interventions:
+            for intervention in interventions:
+                for condition in conditions:
+                    search_terms.append(f"{intervention} {condition}")
+        else:
+            search_terms = list(conditions)
+        
+        # v2 API expects pipe-separated values for multi-valued filters
+        status_filter = "|".join(recruitment_status)
+        type_filter = "|".join(study_types)
+        
+        for term in search_terms:
             if len(nct_ids) >= max_studies:
                 break
                 
-            print(f"🔍 Searching for {condition} trials...")
+            print(f"🔍 Searching for: {term}...")
             
-            # Build search parameters - simplified to avoid API errors
-            search_params = {
-                "filter.condition": condition,
-                "filter.overallStatus": recruitment_status,
-                "filter.studyType": study_types,
-                "pageSize": min(page_size, 100),  # API limit
-                "format": "json"
-            }
+            next_page_token = None
+            pages_fetched = 0
+            max_pages = 3  # Limit pages per search term
             
-            # Don't include interventions in search to avoid API issues
-            # We'll filter by interventions later during processing
-            
-        # Search for each condition
-        for condition in conditions:
-            if len(nct_ids) >= max_studies:
-                break
+            while pages_fetched < max_pages and len(nct_ids) < max_studies:
+                search_params = {
+                    "query.term": term,
+                    "filter.overallStatus": status_filter,
+                    "filter.studyType": type_filter,
+                    "pageSize": min(page_size, 100),
+                    "format": "json"
+                }
                 
-            print(f"🔍 Searching for {condition} trials...")
-            
-            # Use basic search approach that works with the API
-            # Just get any studies - we can filter later
-            search_url = f"https://clinicaltrials.gov/api/v2/studies"
-            search_params = {
-                "pageSize": min(page_size, 100),
-                "format": "json"
-            }
-            
-            try:
-                # Make basic search request first to test API
-                response = self.session.get(search_url, params=search_params)
-                response.raise_for_status()
+                if next_page_token:
+                    search_params["pageToken"] = next_page_token
                 
-                search_data = response.json()
-                studies = search_data.get("studies", [])
-                
-                print(f"  Found {len(studies)} studies")
-                
-                # Extract NCT IDs and filter by condition in the text
-                condition_lower = condition.lower()
-                for study in studies:
-                    if len(nct_ids) >= max_studies:
-                        break
-                        
-                    protocol_section = study.get("protocolSection", {})
-                    identification = protocol_section.get("identificationModule", {})
-                    nct_id = identification.get("nctId")
+                try:
+                    response = self.session.get(self.base_url, params=search_params, timeout=30)
+                    response.raise_for_status()
                     
-                    # Basic filtering by condition
-                    if nct_id and nct_id not in nct_ids:
-                        # Check if condition appears in study text
-                        title = identification.get("officialTitle", "").lower()
-                        brief_title = identification.get("briefTitle", "").lower()
+                    search_data = response.json()
+                    studies = search_data.get("studies", [])
+                    next_page_token = search_data.get("nextPageToken")
+                    
+                    if not studies:
+                        break
+                    
+                    for study in studies:
+                        protocol_section = study.get("protocolSection", {})
+                        identification = protocol_section.get("identificationModule", {})
+                        nct_id = identification.get("nctId")
                         
-                        # Simple keyword matching
-                        condition_keywords = condition_lower.replace(" cancer", "").replace(" ", "_").split("_")
-                        
-                        if any(keyword in title or keyword in brief_title for keyword in condition_keywords):
-                            nct_ids.append(nct_id)
-                
-                # Rate limiting
-                time.sleep(0.5)
-                
-            except Exception as e:
-                print(f"⚠️  Error searching for {condition}: {e}")
-                continue
+                        if nct_id and nct_id not in nct_ids:
+                            nct_ids.add(nct_id)
+                    
+                    print(f"  Found {len(studies)} studies (total unique: {len(nct_ids)})")
+                    
+                    pages_fetched += 1
+                    if not next_page_token:
+                        break
+                    
+                    time.sleep(0.3)
+                    
+                except requests.exceptions.HTTPError as e:
+                    if e.response is not None and e.response.status_code == 400:
+                        # API rejected the query — try simpler params
+                        print(f"  ⚠️  API rejected query, trying without filters...")
+                        try:
+                            simple_params = {
+                                "query.term": term,
+                                "pageSize": min(page_size, 100),
+                                "format": "json"
+                            }
+                            response = self.session.get(self.base_url, params=simple_params, timeout=30)
+                            response.raise_for_status()
+                            search_data = response.json()
+                            studies = search_data.get("studies", [])
+                            for study in studies:
+                                nct_id = study.get("protocolSection", {}).get("identificationModule", {}).get("nctId")
+                                if nct_id and nct_id not in nct_ids:
+                                    nct_ids.add(nct_id)
+                            print(f"  Found {len(studies)} studies (total unique: {len(nct_ids)})")
+                        except Exception as e2:
+                            print(f"  ⚠️  Fallback also failed: {e2}")
+                        break
+                    else:
+                        print(f"  ⚠️  Error: {e}")
+                        break
+                except Exception as e:
+                    print(f"  ⚠️  Error searching for {term}: {e}")
+                    break
+                    
+            time.sleep(0.3)
         
-        print(f"✅ Found {len(nct_ids)} unique cancer clinical trials")
-        return nct_ids[:max_studies]
+        result = list(nct_ids)[:max_studies]
+        print(f"✅ Found {len(result)} unique cancer clinical trials")
+        return result
     
     def extract_study_data(self, nct_id: str) -> Optional[Dict[str, Any]]:
         """
