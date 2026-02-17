@@ -220,8 +220,9 @@ def new_chat_click():
     # Set flag to trigger rerun in main flow (st.rerun() doesn't work in callbacks)
     st.session_state.new_chat_requested = True
 
+@st.fragment
 def create_extraction_results_tabs(state):
-    """Create tabbed extraction results with Metrics and View JSON tabs"""
+    """Create tabbed extraction results with Metrics and View JSON tabs (runs as fragment for partial reruns)"""
     confidence = state.get("confidence_score", 0)
     completeness = state.get("completeness_score", 0)
     missing_fields = state.get("missing_fields", [])
@@ -567,7 +568,7 @@ def _render_json_sections(json_data, field_info, prefix):
                             if "ui_state" not in st.session_state:
                                 st.session_state.ui_state = {}
                             st.session_state.ui_state["active_extraction_tab"] = 1
-                            st.rerun()
+                            st.rerun(scope="fragment")
                 
             else:
                 st.warning("No data extracted for this field")
@@ -748,8 +749,8 @@ def _reextract_field_with_feedback(field_name: str, feedback: str):
                 st.success(f"Re-extraction completed! Field '{field_name}' has been updated.")
                 st.info("The updated results are now visible in the View JSON tab below.")
                 
-                # Use rerun to update the display
-                st.rerun()
+                # Partial rerun: only refresh the extraction results fragment
+                st.rerun(scope="fragment")
             else:
                 st.error("Re-extraction failed. Please try again with different feedback.")
                 # Save failed re-extraction attempt
@@ -922,7 +923,7 @@ def _auto_reextract_empty_fields():
         # Switch to JSON view to show results
         st.session_state.ui_state["active_extraction_tab"] = 1
         time.sleep(1)
-        st.rerun()
+        st.rerun(scope="fragment")
     else:
         st.error("Failed to re-extract any empty fields. Please try manual re-extraction with specific feedback.")
 
@@ -1813,12 +1814,15 @@ if prompt := st.chat_input("Ask a question, search for clinical trials, or paste
                 chat_state = st.session_state.current_state.copy()
                 chat_state["chat_query"] = prompt
                 
-                # If this is a RAG query, run the RAG search first so
-                # chat_node_stream has the results to work with.
+                # Route: RAG search or regular chat
                 if should_use_rag_tool(prompt):
                     chat_state["use_rag_tool"] = False
                     chat_state["rag_tool_results"] = ""
                     chat_state = rag_search_node(chat_state)
+                else:
+                    # Clear any stale RAG results from a previous turn
+                    chat_state["use_rag_tool"] = False
+                    chat_state["rag_tool_results"] = ""
                 
                 message_placeholder = st.empty()
                 full_response = ""
