@@ -5,6 +5,8 @@ Uses ChromaDB for vector storage and retrieval of clinical trials data
 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Disable tokenizer parallelism to avoid conflicts
+os.environ["ANONYMIZED_TELEMETRY"] = "False"  # Disable ChromaDB telemetry
+os.environ["CHROMA_TELEMETRY"] = "False"  # Additional telemetry disable
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
@@ -56,20 +58,22 @@ class ClinicalTrialsVectorDB:
     
     def _create_client(self):
         """Create ChromaDB client, handling API differences across versions."""
-        # Try new-style Settings first (ChromaDB 0.5.x / 0.6.x)
+        # Try 1: PersistentClient with minimal settings (ChromaDB 0.5+/0.6+)
         try:
-            return chromadb.PersistentClient(
+            client = chromadb.PersistentClient(
                 path=str(self.db_path),
                 settings=Settings(
                     anonymized_telemetry=False,
                 )
             )
-        except (TypeError, ValueError):
-            pass
+            logger.info("Created PersistentClient (new-style Settings)")
+            return client
+        except Exception as e1:
+            logger.debug(f"New-style PersistentClient failed: {e1}")
         
-        # Fallback: old-style Settings (ChromaDB 0.4.x)
+        # Try 2: PersistentClient with old-style Settings (ChromaDB 0.4.x)
         try:
-            return chromadb.PersistentClient(
+            client = chromadb.PersistentClient(
                 path=str(self.db_path),
                 settings=Settings(
                     allow_reset=True,
@@ -77,9 +81,34 @@ class ClinicalTrialsVectorDB:
                     is_persistent=True
                 )
             )
-        except Exception as e:
-            logger.warning(f"PersistentClient failed, using in-memory: {e}")
-            return chromadb.Client()
+            logger.info("Created PersistentClient (old-style Settings)")
+            return client
+        except Exception as e2:
+            logger.debug(f"Old-style PersistentClient failed: {e2}")
+        
+        # Try 3: PersistentClient with no Settings (some versions work this way)
+        try:
+            client = chromadb.PersistentClient(path=str(self.db_path))
+            logger.info("Created PersistentClient (no Settings)")
+            return client
+        except Exception as e3:
+            logger.debug(f"No-settings PersistentClient failed: {e3}")
+        
+        # Try 4: Use Client() with Settings that point to path (ephemeral but configurable)
+        try:
+            client = chromadb.Client(Settings(
+                chroma_db_impl="duckdb+parquet",
+                persist_directory=str(self.db_path),
+                anonymized_telemetry=False,
+            ))
+            logger.info("Created Client with persist_directory (legacy API)")
+            return client
+        except Exception as e4:
+            logger.debug(f"Legacy Client with persist_directory failed: {e4}")
+        
+        # Fallback: Ephemeral in-memory client (data lost on restart)
+        logger.warning("All persistent client attempts failed — using ephemeral in-memory client (data will not persist)")
+        return chromadb.Client()
     
     def _init_collection(self, collection_name: str):
         """Initialize collection, handling version-mismatch '_type' errors."""
