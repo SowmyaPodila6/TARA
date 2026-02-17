@@ -40,6 +40,12 @@ class ClinicalTrialsVectorDB:
         # Initialize ChromaDB client - handle both old (0.4.x) and new (0.5.x/0.6.x) APIs
         self.client = self._create_client()
         
+        if self.client is None:
+            logger.error("ChromaDB client initialization failed completely - RAG will be unavailable")
+            self.collection = None
+            self.embedding_function = None
+            return
+        
         # Initialize embedding function
         try:
             self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -54,7 +60,8 @@ class ClinicalTrialsVectorDB:
         self.collection = self._init_collection(collection_name)
         
         # Auto-populate if collection is empty and seed data file exists
-        self._auto_populate_if_empty()
+        if self.collection:
+            self._auto_populate_if_empty()
     
     def _create_client(self):
         """Create ChromaDB client, handling API differences across versions."""
@@ -107,8 +114,14 @@ class ClinicalTrialsVectorDB:
             logger.debug(f"Legacy Client with persist_directory failed: {e4}")
         
         # Fallback: Ephemeral in-memory client (data lost on restart)
-        logger.warning("All persistent client attempts failed — using ephemeral in-memory client (data will not persist)")
-        return chromadb.Client()
+        try:
+            logger.warning("All persistent attempts failed — using ephemeral in-memory client (data will not persist)")
+            client = chromadb.Client()
+            return client
+        except Exception as e5:
+            logger.error(f"Even ephemeral Client() failed: {e5}")
+            # Last resort: return None and let caller handle it
+            return None
     
     def _init_collection(self, collection_name: str):
         """Initialize collection, handling version-mismatch '_type' errors."""
@@ -275,6 +288,9 @@ class ClinicalTrialsVectorDB:
         Returns:
             Number of studies successfully added
         """
+        if not self.collection:
+            logger.error("Collection not initialized - cannot add studies")
+            return 0
         if not studies_data:
             return 0
         
@@ -364,6 +380,10 @@ class ClinicalTrialsVectorDB:
         Returns:
             List of similar studies with metadata and similarity scores
         """
+        if not self.collection:
+            logger.warning("Collection not initialized - returning empty search results")
+            return []
+        
         try:
             # Build where clause for filtering
             where_clause = {}
@@ -486,6 +506,17 @@ class ClinicalTrialsVectorDB:
         """
         Get statistics about the vector database collection
         """
+        if not self.collection:
+            return {
+                "total_studies": 0,
+                "status_distribution": {},
+                "study_type_distribution": {},
+                "phase_distribution": {},
+                "collection_name": self.collection_name,
+                "embedding_model": self.embedding_model,
+                "error": "Collection not initialized"
+            }
+        
         try:
             collection_data = self.collection.get()
             

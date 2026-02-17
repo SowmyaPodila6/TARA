@@ -94,6 +94,10 @@ class ClinicalTrialSearchTool(BaseTool):
         if not self.vector_db:
             return "Error: Clinical trials database not available. Please ensure the vector database is properly initialized."
         
+        # Additional check: vector_db exists but collection failed to initialize
+        if hasattr(self.vector_db, 'collection') and not self.vector_db.collection:
+            return "Error: Clinical trials database collection not available. The database may have failed to initialize due to compatibility issues."
+        
         try:
             # Validate inputs
             if not search_query or not search_query.strip():
