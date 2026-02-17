@@ -40,11 +40,23 @@ class ClinicalTrialsVectorDB:
             self.client = chromadb.PersistentClient(
                 path=str(self.db_path),
                 settings=Settings(
-                    allow_reset=True, 
                     anonymized_telemetry=False,
-                    is_persistent=True
                 )
             )
+        except TypeError:
+            # Older ChromaDB versions may need different settings kwargs
+            try:
+                self.client = chromadb.PersistentClient(
+                    path=str(self.db_path),
+                    settings=Settings(
+                        allow_reset=True,
+                        anonymized_telemetry=False,
+                        is_persistent=True
+                    )
+                )
+            except Exception as e2:
+                logger.warning(f"Failed to create persistent client: {e2}")
+                self.client = chromadb.Client()
         except Exception as e:
             logger.warning(f"Failed to create persistent client: {e}")
             # Fallback to in-memory client
@@ -62,23 +74,14 @@ class ClinicalTrialsVectorDB:
         
         # Get or create collection
         try:
-            self.collection = self.client.get_collection(
+            self.collection = self.client.get_or_create_collection(
                 name=collection_name,
-                embedding_function=self.embedding_function
+                embedding_function=self.embedding_function,
             )
-            logger.info(f"Loaded existing collection '{collection_name}'")
+            logger.info(f"Loaded collection '{collection_name}' ({self.collection.count()} docs)")
         except Exception as e:
-            logger.info(f"Creating new collection '{collection_name}': {e}")
-            try:
-                self.collection = self.client.create_collection(
-                    name=collection_name,
-                    embedding_function=self.embedding_function,
-                    metadata={"description": "Cancer clinical trials for RAG"}
-                )
-                logger.info(f"Created new collection '{collection_name}'")
-            except Exception as create_error:
-                logger.error(f"Failed to create collection: {create_error}")
-                raise
+            logger.error(f"Failed to get/create collection: {e}")
+            raise
     
     def _create_document_text(self, study_data: Dict[str, Any]) -> str:
         """
